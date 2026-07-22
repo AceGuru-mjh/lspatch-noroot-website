@@ -1,0 +1,934 @@
+diff --git a/.github/workflows/build.yml b/.github/workflows/build.yml
+index a3995a0..d3ebf17 100644
+--- a/.github/workflows/build.yml
++++ b/.github/workflows/build.yml
+@@ -45,9 +45,10 @@ jobs:
+       - name: Build Release APK
+         working-directory: modules/${{ matrix.module }}
+         env:
+-          MJH_STORE_PASSWORD: ${{ secrets.MJH_STORE_PASSWORD || 'debug123' }}
+-          MJH_KEY_ALIAS: ${{ secrets.MJH_KEY_ALIAS || 'debug' }}
+-          MJH_KEY_PASSWORD: ${{ secrets.MJH_KEY_PASSWORD || 'debug123' }}
++          MJH_STORE_FILE: ${{ github.workspace }}/modules/keystore/debug.jks
++          MJH_STORE_PASSWORD: debug123
++          MJH_KEY_ALIAS: debug
++          MJH_KEY_PASSWORD: debug123
+         run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
+       - name: Rename APK
+         run: |
+@@ -71,12 +72,17 @@ jobs:
+           find all-apks -name "*.apk" | while read f; do cp "$f" "release-assets/$(basename "$f")"; done
+       - uses: softprops/action-gh-release@v2
+         with:
+-          tag_name: v1.0.11
+-          name: LSPatch-Noroot-modle 模块合集 v1.0.11
++          tag_name: v1.0.12
++          name: LSPatch-Noroot-modle 模块合集 v1.0.12
+           body: |
+-            # LSPatch-Noroot-modle v1.0.11
+-            10 个 LSPosed Root 模块 APK
++            # LSPatch-Noroot-modle v1.0.12
++            
++            ## 三大铁律修复版
++            - 铁律 1: XposedLoader 零 import hooks/* (全部改为反射)
++            - 铁律 2: Hook 调用用 Class.forName().getDeclaredMethod().invoke()
++            - 铁律 3: 进程双分支 (自身进程→UI，宿主进程→纯Hook)
++            - CI 签名修复: MJH_STORE_FILE 指向 debug.jks
++            
++            ## 包含 11 个免 Root 模块
+             开发者：MJH
+           files: release-assets/*.apk
+-          prerelease: false
+-          draft: false
+diff --git a/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/XposedLoader.kt b/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/XposedLoader.kt
+index f977765..79012aa 100755
+--- a/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/XposedLoader.kt
++++ b/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/XposedLoader.kt
+@@ -2,17 +2,6 @@ package com.adblockerx.noroot
+ 
+ import android.util.Log
+ import com.adblockerx.noroot.core.ConfigClient
+-import com.adblockerx.noroot.hooks.AdViewHideHook
+-import com.adblockerx.noroot.hooks.AdClosePlusHook
+-import com.adblockerx.noroot.hooks.CookieCleanHook
+-import com.adblockerx.noroot.hooks.HostsFilterHook
+-import com.adblockerx.noroot.hooks.IntentInterceptorHook
+-import com.adblockerx.noroot.hooks.OkHttpAdHook
+-import com.adblockerx.noroot.hooks.RedirectBlockHook
+-import com.adblockerx.noroot.hooks.ShizukuDnsHook
+-import com.adblockerx.noroot.hooks.TrackerBlockHook
+-import com.adblockerx.noroot.hooks.URLConnectionAdHook
+-import com.adblockerx.noroot.hooks.WebViewAdHook
+ import com.adblockerx.noroot.utils.EnvDetector
+ import com.adblockerx.noroot.utils.HookConfigReader
+ import de.robv.android.xposed.IXposedHookLoadPackage
+@@ -89,37 +78,37 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+             val cfg = loadConfig()
+ 
+             Log.e(TAG, "Loading HostsFilterHook...")
+-            try { if (cfg.hostsFilterEnabled) HostsFilterHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "HostsFilterHook FAIL: ${e.message}") }
++            try { if (cfg.hostsFilterEnabled) invokeHook("HostsFilterHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "HostsFilterHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading WebViewAdHook...")
+-            try { if (cfg.webviewAdEnabled) WebViewAdHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "WebViewAdHook FAIL: ${e.message}") }
++            try { if (cfg.webviewAdEnabled) invokeHook("WebViewAdHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "WebViewAdHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading OkHttpAdHook...")
+-            try { if (cfg.okHttpAdEnabled) OkHttpAdHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "OkHttpAdHook FAIL: ${e.message}") }
++            try { if (cfg.okHttpAdEnabled) invokeHook("OkHttpAdHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "OkHttpAdHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading URLConnectionAdHook...")
+-            try { if (cfg.urlConnectionAdEnabled) URLConnectionAdHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "URLConnectionAdHook FAIL: ${e.message}") }
++            try { if (cfg.urlConnectionAdEnabled) invokeHook("URLConnectionAdHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "URLConnectionAdHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading AdViewHideHook...")
+-            try { if (cfg.adViewHideEnabled) AdViewHideHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "AdViewHideHook FAIL: ${e.message}") }
++            try { if (cfg.adViewHideEnabled) invokeHook("AdViewHideHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "AdViewHideHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading TrackerBlockHook...")
+-            try { if (cfg.trackerBlockEnabled) TrackerBlockHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "TrackerBlockHook FAIL: ${e.message}") }
++            try { if (cfg.trackerBlockEnabled) invokeHook("TrackerBlockHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "TrackerBlockHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading CookieCleanHook...")
+-            try { if (cfg.cookieCleanEnabled) CookieCleanHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "CookieCleanHook FAIL: ${e.message}") }
++            try { if (cfg.cookieCleanEnabled) invokeHook("CookieCleanHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "CookieCleanHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading RedirectBlockHook...")
+-            try { if (cfg.redirectBlockEnabled) RedirectBlockHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "RedirectBlockHook FAIL: ${e.message}") }
++            try { if (cfg.redirectBlockEnabled) invokeHook("RedirectBlockHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "RedirectBlockHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading IntentInterceptorHook...")
+-            try { if (cfg.intentInterceptorEnabled) IntentInterceptorHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "IntentInterceptorHook FAIL: ${e.message}") }
++            try { if (cfg.intentInterceptorEnabled) invokeHook("IntentInterceptorHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "IntentInterceptorHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading AdClosePlusHook...")
+-            try { if (cfg.screenshotUnlockEnabled || cfg.shakeAdBlockEnabled || cfg.vpnDetectBypassEnabled) AdClosePlusHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "AdClosePlusHook FAIL: ${e.message}") }
++            try { if (cfg.screenshotUnlockEnabled || cfg.shakeAdBlockEnabled || cfg.vpnDetectBypassEnabled) invokeHook("AdClosePlusHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "AdClosePlusHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading ShizukuDnsHook...")
+-            try { if (cfg.dnsAdBlockEnabled) ShizukuDnsHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ShizukuDnsHook FAIL: ${e.message}") }
++            try { if (cfg.dnsAdBlockEnabled) invokeHook("ShizukuDnsHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ShizukuDnsHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "===== All hooks loaded for $pkg =====")
+         } catch (e: Throwable) {
+@@ -149,4 +138,26 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+         HookConfigReader.readGlobal()?.let { return it }
+         return try { com.adblockerx.noroot.utils.ConfigManager.getGlobalConfig() } catch (_: Throwable) { com.adblockerx.noroot.models.AdBlockConfig() }
+     }
++    /** 铁律 1+2: 反射加载 Hook，避免 import 导致类加载冲突 */
++    private fun invokeHook(
++        name: String,
++        lpparam: de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam,
++        cfg: ModuleConfig
++    ) {
++        try {
++            val cls = Class.forName("com.adblockerx.noroot.hooks." + name)
++            val m = cls.getDeclaredMethod(
++                "apply",
++                de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam::class.java,
++                com.adblockerx.noroot.models.AdBlockConfig::class.java
++            )
++            m.isAccessible = true
++            m.invoke(null, lpparam, cfg)
++        } catch (e: ClassNotFoundException) {
++            Log.e(TAG, name + " class not found")
++        } catch (e: Throwable) {
++            Log.e(TAG, name + " FAIL: " + e.message)
++        }
++    }
++
+ }
+diff --git a/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/XposedLoader.kt b/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/XposedLoader.kt
+index a9d05a0..bc1ee5d 100755
+--- a/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/XposedLoader.kt
++++ b/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/XposedLoader.kt
+@@ -2,7 +2,6 @@ package com.audioboost.noroot
+ 
+ import android.util.Log
+ import com.audioboost.noroot.core.ConfigClient
+-import com.audioboost.noroot.hooks.*
+ import com.audioboost.noroot.models.AudioConfig
+ import com.audioboost.noroot.utils.EnvDetector
+ import com.audioboost.noroot.utils.HookConfigReader
+@@ -80,25 +79,25 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+             val cfg = loadConfig()
+ 
+             Log.e(TAG, "Loading TinymixBridgeHook...")
+-            try { if (cfg.tinymixEnabled) TinymixBridgeHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "TinymixBridgeHook FAIL: ${e.message}") }
++            try { if (cfg.tinymixEnabled) invokeHook("TinymixBridgeHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "TinymixBridgeHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading VolumeBoostHook...")
+-            try { if (cfg.volumeBoostEnabled) VolumeBoostHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "VolumeBoostHook FAIL: ${e.message}") }
++            try { if (cfg.volumeBoostEnabled) invokeHook("VolumeBoostHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "VolumeBoostHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading BassBoostHook...")
+-            try { if (cfg.bassBoostEnabled) BassBoostHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "BassBoostHook FAIL: ${e.message}") }
++            try { if (cfg.bassBoostEnabled) invokeHook("BassBoostHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "BassBoostHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading EqualizerHook...")
+-            try { if (cfg.equalizerEnabled) EqualizerHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "EqualizerHook FAIL: ${e.message}") }
++            try { if (cfg.equalizerEnabled) invokeHook("EqualizerHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "EqualizerHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading SpeakerBoostHook...")
+-            try { if (cfg.speakerBoostEnabled) SpeakerBoostHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "SpeakerBoostHook FAIL: ${e.message}") }
++            try { if (cfg.speakerBoostEnabled) invokeHook("SpeakerBoostHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "SpeakerBoostHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading MicBoostHook...")
+-            try { if (cfg.micBoostEnabled) MicBoostHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "MicBoostHook FAIL: ${e.message}") }
++            try { if (cfg.micBoostEnabled) invokeHook("MicBoostHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "MicBoostHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading AudioQualityEnhanceHook...")
+-            try { if (cfg.audioQualityEnhanceEnabled) AudioQualityEnhanceHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "AudioQualityEnhanceHook FAIL: ${e.message}") }
++            try { if (cfg.audioQualityEnhanceEnabled) invokeHook("AudioQualityEnhanceHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "AudioQualityEnhanceHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "===== All hooks loaded for $pkg =====")
+         } catch (e: Throwable) {
+@@ -118,4 +117,26 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+         HookConfigReader.readGlobal()?.let { return it }
+         return try { com.audioboost.noroot.utils.ConfigManager.getGlobalConfig() } catch (_: Throwable) { AudioConfig(packageName = "global") }
+     }
++    /** 铁律 1+2: 反射加载 Hook，避免 import 导致类加载冲突 */
++    private fun invokeHook(
++        name: String,
++        lpparam: de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam,
++        cfg: AudioConfig
++    ) {
++        try {
++            val cls = Class.forName("com.audioboost.noroot.hooks." + name)
++            val m = cls.getDeclaredMethod(
++                "apply",
++                de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam::class.java,
++                AudioConfig::class.java
++            )
++            m.isAccessible = true
++            m.invoke(null, lpparam, cfg)
++        } catch (e: ClassNotFoundException) {
++            Log.e(TAG, name + " class not found")
++        } catch (e: Throwable) {
++            Log.e(TAG, name + " FAIL: " + e.message)
++        }
++    }
++
+ }
+diff --git a/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/XposedLoader.kt b/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/XposedLoader.kt
+index ab0dea9..f24ed5d 100755
+--- a/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/XposedLoader.kt
++++ b/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/XposedLoader.kt
+@@ -2,7 +2,6 @@ package com.batteryopt.noroot
+ 
+ import android.util.Log
+ import com.batteryopt.noroot.core.ConfigClient
+-import com.batteryopt.noroot.hooks.*
+ import com.batteryopt.noroot.models.BatteryConfig
+ import com.batteryopt.noroot.utils.EnvDetector
+ import com.batteryopt.noroot.utils.HookConfigReader
+@@ -80,37 +79,37 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+             val cfg = loadConfig()
+ 
+             Log.e(TAG, "Loading WakeLockHook...")
+-            try { if (cfg.wakeLockEnabled) WakeLockHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "WakeLockHook FAIL: ${e.message}") }
++            try { if (cfg.wakeLockEnabled) invokeHook("WakeLockHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "WakeLockHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading AlarmOptimizerHook...")
+-            try { if (cfg.alarmEnabled) AlarmOptimizerHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "AlarmOptimizerHook FAIL: ${e.message}") }
++            try { if (cfg.alarmEnabled) invokeHook("AlarmOptimizerHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "AlarmOptimizerHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading BackgroundSyncHook...")
+-            try { if (cfg.syncEnabled) BackgroundSyncHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "BackgroundSyncHook FAIL: ${e.message}") }
++            try { if (cfg.syncEnabled) invokeHook("BackgroundSyncHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "BackgroundSyncHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading AppOpsRestrictHook...")
+-            try { if (cfg.appOpsRestrictEnabled) AppOpsRestrictHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "AppOpsRestrictHook FAIL: ${e.message}") }
++            try { if (cfg.appOpsRestrictEnabled) invokeHook("AppOpsRestrictHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "AppOpsRestrictHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading JobSchedulerHook...")
+-            try { if (cfg.jobEnabled) JobSchedulerHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "JobSchedulerHook FAIL: ${e.message}") }
++            try { if (cfg.jobEnabled) invokeHook("JobSchedulerHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "JobSchedulerHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading LocationOptHook...")
+-            try { if (cfg.locationEnabled) LocationOptHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "LocationOptHook FAIL: ${e.message}") }
++            try { if (cfg.locationEnabled) invokeHook("LocationOptHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "LocationOptHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading AnimationOptHook...")
+-            try { if (cfg.animationEnabled) AnimationOptHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "AnimationOptHook FAIL: ${e.message}") }
++            try { if (cfg.animationEnabled) invokeHook("AnimationOptHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "AnimationOptHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading SensorOptHook...")
+-            try { if (cfg.sensorEnabled) SensorOptHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "SensorOptHook FAIL: ${e.message}") }
++            try { if (cfg.sensorEnabled) invokeHook("SensorOptHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "SensorOptHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading BluetoothScanThrottleHook...")
+-            try { if (cfg.bluetoothScanThrottleEnabled) BluetoothScanThrottleHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "BluetoothScanThrottleHook FAIL: ${e.message}") }
++            try { if (cfg.bluetoothScanThrottleEnabled) invokeHook("BluetoothScanThrottleHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "BluetoothScanThrottleHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading CameraBackgroundBlockHook...")
+-            try { if (cfg.cameraBackgroundBlockEnabled) CameraBackgroundBlockHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "CameraBackgroundBlockHook FAIL: ${e.message}") }
++            try { if (cfg.cameraBackgroundBlockEnabled) invokeHook("CameraBackgroundBlockHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "CameraBackgroundBlockHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading VibratorThrottleHook...")
+-            try { if (cfg.vibratorThrottleEnabled) VibratorThrottleHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "VibratorThrottleHook FAIL: ${e.message}") }
++            try { if (cfg.vibratorThrottleEnabled) invokeHook("VibratorThrottleHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "VibratorThrottleHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "===== All hooks loaded for $pkg =====")
+         } catch (e: Throwable) {
+@@ -132,4 +131,26 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+         HookConfigReader.readGlobal()?.let { return it }
+         return try { com.batteryopt.noroot.utils.ConfigManager.getGlobalConfig() } catch (_: Throwable) { BatteryConfig(packageName = "global") }
+     }
++    /** 铁律 1+2: 反射加载 Hook，避免 import 导致类加载冲突 */
++    private fun invokeHook(
++        name: String,
++        lpparam: de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam,
++        cfg: BatteryConfig
++    ) {
++        try {
++            val cls = Class.forName("com.batteryopt.noroot.hooks." + name)
++            val m = cls.getDeclaredMethod(
++                "apply",
++                de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam::class.java,
++                BatteryConfig::class.java
++            )
++            m.isAccessible = true
++            m.invoke(null, lpparam, cfg)
++        } catch (e: ClassNotFoundException) {
++            Log.e(TAG, name + " class not found")
++        } catch (e: Throwable) {
++            Log.e(TAG, name + " FAIL: " + e.message)
++        }
++    }
++
+ }
+diff --git a/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/XposedLoader.kt b/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/XposedLoader.kt
+index 6b43dc5..1f6a375 100755
+--- a/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/XposedLoader.kt
++++ b/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/XposedLoader.kt
+@@ -2,7 +2,6 @@ package com.gameunlocker.noroot
+ 
+ import android.util.Log
+ import com.gameunlocker.noroot.core.ConfigClient
+-import com.gameunlocker.noroot.hooks.*
+ import com.gameunlocker.noroot.models.GameConfig
+ import com.gameunlocker.noroot.utils.EnvDetector
+ import com.gameunlocker.noroot.utils.HookConfigReader
+@@ -80,34 +79,34 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+             val cfg = loadConfig()
+ 
+             Log.e(TAG, "Loading GameDetectionHideHook...")
+-            try { if (cfg.detectionHideEnabled) GameDetectionHideHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "GameDetectionHideHook FAIL: ${e.message}") }
++            try { if (cfg.detectionHideEnabled) invokeHook("GameDetectionHideHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "GameDetectionHideHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading DeviceSpoofHook...")
+-            try { if (cfg.deviceSpoofEnabled) DeviceSpoofHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "DeviceSpoofHook FAIL: ${e.message}") }
++            try { if (cfg.deviceSpoofEnabled) invokeHook("DeviceSpoofHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "DeviceSpoofHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading FrameRateUnlockHook...")
+-            try { if (cfg.frameRateUnlockEnabled) FrameRateUnlockHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "FrameRateUnlockHook FAIL: ${e.message}") }
++            try { if (cfg.frameRateUnlockEnabled) invokeHook("FrameRateUnlockHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "FrameRateUnlockHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading ProcessOptimizerHook...")
+-            try { if (cfg.processOptimizeEnabled) ProcessOptimizerHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ProcessOptimizerHook FAIL: ${e.message}") }
++            try { if (cfg.processOptimizeEnabled) invokeHook("ProcessOptimizerHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ProcessOptimizerHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading ResolutionSpoofHook...")
+-            try { if (cfg.resolutionSpoofEnabled) ResolutionSpoofHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ResolutionSpoofHook FAIL: ${e.message}") }
++            try { if (cfg.resolutionSpoofEnabled) invokeHook("ResolutionSpoofHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ResolutionSpoofHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading ShizukuSystemTuneHook...")
+-            try { if (cfg.shizukuSystemTuneEnabled) ShizukuSystemTuneHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ShizukuSystemTuneHook FAIL: ${e.message}") }
++            try { if (cfg.shizukuSystemTuneEnabled) invokeHook("ShizukuSystemTuneHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ShizukuSystemTuneHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading TouchSamplingBoostHook...")
+-            try { if (cfg.touchSamplingBoostEnabled) TouchSamplingBoostHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "TouchSamplingBoostHook FAIL: ${e.message}") }
++            try { if (cfg.touchSamplingBoostEnabled) invokeHook("TouchSamplingBoostHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "TouchSamplingBoostHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading NetworkLatencyOptHook...")
+-            try { if (cfg.networkLatencyOptEnabled) NetworkLatencyOptHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "NetworkLatencyOptHook FAIL: ${e.message}") }
++            try { if (cfg.networkLatencyOptEnabled) invokeHook("NetworkLatencyOptHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "NetworkLatencyOptHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading AudioPriorityBoostHook...")
+-            try { if (cfg.audioPriorityBoostEnabled) AudioPriorityBoostHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "AudioPriorityBoostHook FAIL: ${e.message}") }
++            try { if (cfg.audioPriorityBoostEnabled) invokeHook("AudioPriorityBoostHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "AudioPriorityBoostHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading MemoryDefragHook...")
+-            try { if (cfg.memoryDefragEnabled) MemoryDefragHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "MemoryDefragHook FAIL: ${e.message}") }
++            try { if (cfg.memoryDefragEnabled) invokeHook("MemoryDefragHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "MemoryDefragHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "===== All hooks loaded for $pkg =====")
+         } catch (e: Throwable) {
+@@ -127,4 +126,26 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+         HookConfigReader.readGlobal()?.let { return it }
+         return try { com.gameunlocker.noroot.utils.ConfigManager.getGlobalConfig() } catch (_: Throwable) { GameConfig(packageName = "global") }
+     }
++    /** 铁律 1+2: 反射加载 Hook，避免 import 导致类加载冲突 */
++    private fun invokeHook(
++        name: String,
++        lpparam: de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam,
++        cfg: GameConfig
++    ) {
++        try {
++            val cls = Class.forName("com.gameunlocker.noroot.hooks." + name)
++            val m = cls.getDeclaredMethod(
++                "apply",
++                de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam::class.java,
++                GameConfig::class.java
++            )
++            m.isAccessible = true
++            m.invoke(null, lpparam, cfg)
++        } catch (e: ClassNotFoundException) {
++            Log.e(TAG, name + " class not found")
++        } catch (e: Throwable) {
++            Log.e(TAG, name + " FAIL: " + e.message)
++        }
++    }
++
+ }
+diff --git a/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/XposedLoader.kt b/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/XposedLoader.kt
+index 167ff3e..8691457 100755
+--- a/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/XposedLoader.kt
++++ b/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/XposedLoader.kt
+@@ -2,7 +2,6 @@ package com.microx.enhancer
+ 
+ import android.util.Log
+ import com.microx.enhancer.core.ConfigClient
+-import com.microx.enhancer.hooks.*
+ import com.microx.enhancer.utils.HookHelper
+ import de.robv.android.xposed.IXposedHookLoadPackage
+ import de.robv.android.xposed.IXposedHookZygoteInit
+@@ -86,17 +85,17 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+         currentPkg = "com.tencent.mm"
+ 
+         val modules = listOf(
+-            "SecurityBypass" to { SecurityBypassHook.hook(lpparam) },
+-            "AdBlock" to { AdBlockHook.hook(lpparam) },
+-            "AntiRecall" to { AntiRecallHook.hook(lpparam) },
+-            "Moment" to { MomentHook.hook(lpparam) },
+-            "UIMod" to { UIModHook.hook(lpparam) },
+-            "Privacy" to { PrivacyHook.hook(lpparam) },
+-            "BatchManager" to { BatchManagerHook.hook(lpparam) },
+-            "AutoReply" to { AutoReplyHook.hook(lpparam) },
+-            "VoiceMessageExport" to { VoiceMessageExportHook.hook(lpparam) },
+-            "MessageSearchEnhance" to { MessageSearchEnhanceHook.hook(lpparam) },
+-            "CustomTheme" to { CustomThemeHook.hook(lpparam) }
++            "SecurityBypass" to { invokeHookNoCfg("SecurityBypassHook", lpparam) },
++            "AdBlock" to { invokeHookNoCfg("AdBlockHook", lpparam) },
++            "AntiRecall" to { invokeHookNoCfg("AntiRecallHook", lpparam) },
++            "Moment" to { invokeHookNoCfg("MomentHook", lpparam) },
++            "UIMod" to { invokeHookNoCfg("UIModHook", lpparam) },
++            "Privacy" to { invokeHookNoCfg("PrivacyHook", lpparam) },
++            "BatchManager" to { invokeHookNoCfg("BatchManagerHook", lpparam) },
++            "AutoReply" to { invokeHookNoCfg("AutoReplyHook", lpparam) },
++            "VoiceMessageExport" to { invokeHookNoCfg("VoiceMessageExportHook", lpparam) },
++            "MessageSearchEnhance" to { invokeHookNoCfg("MessageSearchEnhanceHook", lpparam) },
++            "CustomTheme" to { invokeHookNoCfg("CustomThemeHook", lpparam) }
+         )
+ 
+         for ((name, hookAction) in modules) {
+@@ -116,7 +115,7 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+         currentPkg = "com.tencent.mobileqq"
+ 
+         val modules = listOf(
+-            "SecurityBypass" to { SecurityBypassHook.hook(lpparam) },
++            "SecurityBypass" to { invokeHookNoCfg("SecurityBypassHook", lpparam) },
+             "AdBlock-QQ" to { AdBlockHook.hookQQ(lpparam) },
+             "AntiRecall-QQ" to { AntiRecallHook.hookQQ(lpparam) },
+             "UIMod-QQ" to { UIModHook.hookQQ(lpparam) },
+@@ -136,4 +135,21 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+ 
+         Log.e(TAG, "===== QQ hooks loaded =====")
+     }
++    /** 铁律 1+2: 反射加载 Hook (无 cfg 参数版本) */
++    private fun invokeHookNoCfg(
++        name: String,
++        lpparam: de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam
++    ) {
++        try {
++            val cls = Class.forName("com.microx.enhancer.hooks." + name)
++            val m = cls.getDeclaredMethod("hook", de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam::class.java)
++            m.isAccessible = true
++            m.invoke(null, lpparam)
++        } catch (e: ClassNotFoundException) {
++            Log.e(TAG, name + " class not found")
++        } catch (e: Throwable) {
++            Log.e(TAG, name + " FAIL: " + e.message)
++        }
++    }
++
+ }
+diff --git a/modules/NotifyMaster_NoRoot/app/src/main/java/com/notifymaster/noroot/XposedLoader.kt b/modules/NotifyMaster_NoRoot/app/src/main/java/com/notifymaster/noroot/XposedLoader.kt
+index 66e615b..ee65b6b 100755
+--- a/modules/NotifyMaster_NoRoot/app/src/main/java/com/notifymaster/noroot/XposedLoader.kt
++++ b/modules/NotifyMaster_NoRoot/app/src/main/java/com/notifymaster/noroot/XposedLoader.kt
+@@ -2,7 +2,6 @@ package com.notifymaster.noroot
+ 
+ import android.util.Log
+ import com.notifymaster.noroot.core.ConfigClient
+-import com.notifymaster.noroot.hooks.*
+ import com.notifymaster.noroot.models.NotifyConfig
+ import com.notifymaster.noroot.utils.EnvDetector
+ import com.notifymaster.noroot.utils.HookConfigReader
+@@ -81,28 +80,28 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+             cfg.packageName = pkg
+ 
+             Log.e(TAG, "Loading NotifyFilterHook...")
+-            try { if (cfg.notifyFilterEnabled) NotifyFilterHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "NotifyFilterHook FAIL: ${e.message}") }
++            try { if (cfg.notifyFilterEnabled) invokeHook("NotifyFilterHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "NotifyFilterHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading AntiRecallNotifyHook...")
+-            try { if (cfg.antiRecallNotifyEnabled) AntiRecallNotifyHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "AntiRecallNotifyHook FAIL: ${e.message}") }
++            try { if (cfg.antiRecallNotifyEnabled) invokeHook("AntiRecallNotifyHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "AntiRecallNotifyHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading NotifyHistoryHook...")
+-            try { if (cfg.notifyHistoryEnabled) NotifyHistoryHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "NotifyHistoryHook FAIL: ${e.message}") }
++            try { if (cfg.notifyHistoryEnabled) invokeHook("NotifyHistoryHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "NotifyHistoryHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading NotifyBeautifyHook...")
+-            try { if (cfg.notifyBeautifyEnabled) NotifyBeautifyHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "NotifyBeautifyHook FAIL: ${e.message}") }
++            try { if (cfg.notifyBeautifyEnabled) invokeHook("NotifyBeautifyHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "NotifyBeautifyHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading BatchNotifyHook...")
+-            try { if (cfg.batchNotifyEnabled) BatchNotifyHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "BatchNotifyHook FAIL: ${e.message}") }
++            try { if (cfg.batchNotifyEnabled) invokeHook("BatchNotifyHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "BatchNotifyHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading PriorityOverrideHook...")
+-            try { if (cfg.priorityOverrideEnabled) PriorityOverrideHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "PriorityOverrideHook FAIL: ${e.message}") }
++            try { if (cfg.priorityOverrideEnabled) invokeHook("PriorityOverrideHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "PriorityOverrideHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading SilentNotifyHook...")
+-            try { if (cfg.silentNotifyEnabled) SilentNotifyHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "SilentNotifyHook FAIL: ${e.message}") }
++            try { if (cfg.silentNotifyEnabled) invokeHook("SilentNotifyHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "SilentNotifyHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading ShizukuNotifyCmdHook...")
+-            try { if (cfg.shizukuNotifyCmdEnabled) ShizukuNotifyCmdHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ShizukuNotifyCmdHook FAIL: ${e.message}") }
++            try { if (cfg.shizukuNotifyCmdEnabled) invokeHook("ShizukuNotifyCmdHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ShizukuNotifyCmdHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "===== All hooks loaded for $pkg =====")
+         } catch (e: Throwable) {
+@@ -124,4 +123,26 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+         HookConfigReader.readGlobal()?.let { return it }
+         return try { com.notifymaster.noroot.utils.ConfigManager.getGlobalConfig() } catch (_: Throwable) { NotifyConfig(packageName = "global") }
+     }
++    /** 铁律 1+2: 反射加载 Hook，避免 import 导致类加载冲突 */
++    private fun invokeHook(
++        name: String,
++        lpparam: de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam,
++        cfg: NotifyConfig
++    ) {
++        try {
++            val cls = Class.forName("com.notifymaster.noroot.hooks." + name)
++            val m = cls.getDeclaredMethod(
++                "apply",
++                de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam::class.java,
++                NotifyConfig::class.java
++            )
++            m.isAccessible = true
++            m.invoke(null, lpparam, cfg)
++        } catch (e: ClassNotFoundException) {
++            Log.e(TAG, name + " class not found")
++        } catch (e: Throwable) {
++            Log.e(TAG, name + " FAIL: " + e.message)
++        }
++    }
++
+ }
+diff --git a/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/XposedLoader.kt b/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/XposedLoader.kt
+index 5c4dfe7..e27e65a 100755
+--- a/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/XposedLoader.kt
++++ b/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/XposedLoader.kt
+@@ -2,7 +2,6 @@ package com.privacyguard.noroot
+ 
+ import android.util.Log
+ import com.privacyguard.noroot.core.ConfigClient
+-import com.privacyguard.noroot.hooks.*
+ import com.privacyguard.noroot.models.PrivacyConfig
+ import com.privacyguard.noroot.utils.EnvDetector
+ import com.privacyguard.noroot.utils.HookConfigReader
+@@ -80,40 +79,40 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+             val cfg = loadConfig()
+ 
+             Log.e(TAG, "Loading DeviceIdSpoofHook...")
+-            try { if (cfg.deviceIdSpoofEnabled) DeviceIdSpoofHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "DeviceIdSpoofHook FAIL: ${e.message}") }
++            try { if (cfg.deviceIdSpoofEnabled) invokeHook("DeviceIdSpoofHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "DeviceIdSpoofHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading ClipboardGuardHook...")
+-            try { if (cfg.clipboardGuardEnabled) ClipboardGuardHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ClipboardGuardHook FAIL: ${e.message}") }
++            try { if (cfg.clipboardGuardEnabled) invokeHook("ClipboardGuardHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ClipboardGuardHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading PermissionSpoofHook...")
+-            try { if (cfg.permissionSpoofEnabled) PermissionSpoofHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "PermissionSpoofHook FAIL: ${e.message}") }
++            try { if (cfg.permissionSpoofEnabled) invokeHook("PermissionSpoofHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "PermissionSpoofHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading PmRevokeHook...")
+-            try { if (cfg.pmRevokeEnabled) PmRevokeHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "PmRevokeHook FAIL: ${e.message}") }
++            try { if (cfg.pmRevokeEnabled) invokeHook("PmRevokeHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "PmRevokeHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading LocationSpoofHook...")
+-            try { if (cfg.locationSpoofEnabled) LocationSpoofHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "LocationSpoofHook FAIL: ${e.message}") }
++            try { if (cfg.locationSpoofEnabled) invokeHook("LocationSpoofHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "LocationSpoofHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading SensorFakerHook...")
+-            try { if (cfg.sensorFakerEnabled) SensorFakerHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "SensorFakerHook FAIL: ${e.message}") }
++            try { if (cfg.sensorFakerEnabled) invokeHook("SensorFakerHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "SensorFakerHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading AdvertisingIdHook...")
+-            try { if (cfg.advertisingIdBlockEnabled) AdvertisingIdHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "AdvertisingIdHook FAIL: ${e.message}") }
++            try { if (cfg.advertisingIdBlockEnabled) invokeHook("AdvertisingIdHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "AdvertisingIdHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading PackageVisibilitySpoofHook...")
+-            try { if (cfg.packageVisibilitySpoofEnabled) PackageVisibilitySpoofHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "PackageVisibilitySpoofHook FAIL: ${e.message}") }
++            try { if (cfg.packageVisibilitySpoofEnabled) invokeHook("PackageVisibilitySpoofHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "PackageVisibilitySpoofHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading NetworkInfoSpoofHook...")
+-            try { if (cfg.networkInfoSpoofEnabled) NetworkInfoSpoofHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "NetworkInfoSpoofHook FAIL: ${e.message}") }
++            try { if (cfg.networkInfoSpoofEnabled) invokeHook("NetworkInfoSpoofHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "NetworkInfoSpoofHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading ScreenMetricsSpoofHook...")
+-            try { if (cfg.screenMetricsSpoofEnabled) ScreenMetricsSpoofHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ScreenMetricsSpoofHook FAIL: ${e.message}") }
++            try { if (cfg.screenMetricsSpoofEnabled) invokeHook("ScreenMetricsSpoofHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ScreenMetricsSpoofHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading StoragePathSpoofHook...")
+-            try { if (cfg.storagePathSpoofEnabled) StoragePathSpoofHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "StoragePathSpoofHook FAIL: ${e.message}") }
++            try { if (cfg.storagePathSpoofEnabled) invokeHook("StoragePathSpoofHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "StoragePathSpoofHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading PrivacyPlusHook...")
+-            try { if (cfg.installStatusSpoofEnabled || cfg.mockLocationSystemLevelEnabled) PrivacyPlusHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "PrivacyPlusHook FAIL: ${e.message}") }
++            try { if (cfg.installStatusSpoofEnabled || cfg.mockLocationSystemLevelEnabled) invokeHook("PrivacyPlusHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "PrivacyPlusHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "===== All hooks loaded for $pkg =====")
+         } catch (e: Throwable) {
+@@ -133,4 +132,26 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+         HookConfigReader.readGlobal()?.let { return it }
+         return try { com.privacyguard.noroot.utils.ConfigManager.getGlobalConfig() } catch (_: Throwable) { PrivacyConfig(packageName = "global") }
+     }
++    /** 铁律 1+2: 反射加载 Hook，避免 import 导致类加载冲突 */
++    private fun invokeHook(
++        name: String,
++        lpparam: de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam,
++        cfg: PrivacyConfig
++    ) {
++        try {
++            val cls = Class.forName("com.privacyguard.noroot.hooks." + name)
++            val m = cls.getDeclaredMethod(
++                "apply",
++                de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam::class.java,
++                PrivacyConfig::class.java
++            )
++            m.isAccessible = true
++            m.invoke(null, lpparam, cfg)
++        } catch (e: ClassNotFoundException) {
++            Log.e(TAG, name + " class not found")
++        } catch (e: Throwable) {
++            Log.e(TAG, name + " FAIL: " + e.message)
++        }
++    }
++
+ }
+diff --git a/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/XposedLoader.kt b/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/XposedLoader.kt
+index 6076533..b00ef30 100644
+--- a/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/XposedLoader.kt
++++ b/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/XposedLoader.kt
+@@ -2,13 +2,6 @@ package com.mjh.shizukufix
+ 
+ import android.util.Log
+ import com.mjh.shizukufix.core.ConfigClient
+-import com.mjh.shizukufix.hooks.AutoGrantHelperHook
+-import com.mjh.shizukufix.hooks.HideFromSceneHook
+-import com.mjh.shizukufix.hooks.ScenePermissionRequesterHook
+-import com.mjh.shizukufix.hooks.ServiceWatchdogHook
+-import com.mjh.shizukufix.hooks.ShizukuGrantHook
+-import com.mjh.shizukufix.hooks.ShizukuListInjectorHook
+-import com.mjh.shizukufix.hooks.ShizukuVariantDetectorHook
+ import com.mjh.shizukufix.models.ShizukuFixConfig
+ import com.mjh.shizukufix.utils.EnvDetector
+ import com.mjh.shizukufix.utils.HookConfigReader
+@@ -86,18 +79,18 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+ 
+             if (pkg == SCENE_PACKAGE) {
+                 Log.e(TAG, "=== Path A: Hooking Scene process ===")
+-                try { if (cfg.sceneFixEnabled) ScenePermissionRequesterHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ScenePermissionRequesterHook FAIL: ${e.message}") }
+-                try { if (cfg.pmGrantEnabled) ShizukuGrantHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ShizukuGrantHook FAIL: ${e.message}") }
+-                try { if (cfg.hideFromSceneEnabled) HideFromSceneHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "HideFromSceneHook FAIL: ${e.message}") }
++                try { if (cfg.sceneFixEnabled) invokeHook("ScenePermissionRequesterHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ScenePermissionRequesterHook FAIL: ${e.message}") }
++                try { if (cfg.pmGrantEnabled) invokeHook("ShizukuGrantHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ShizukuGrantHook FAIL: ${e.message}") }
++                try { if (cfg.hideFromSceneEnabled) invokeHook("HideFromSceneHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "HideFromSceneHook FAIL: ${e.message}") }
+                 return
+             }
+ 
+             if (isShizukuTarget(pkg)) {
+                 Log.e(TAG, "=== Path B: Hooking Shizuku process ===")
+-                try { if (cfg.variantDetectEnabled) ShizukuVariantDetectorHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ShizukuVariantDetectorHook FAIL: ${e.message}") }
+-                try { if (cfg.listInjectorEnabled) ShizukuListInjectorHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ShizukuListInjectorHook FAIL: ${e.message}") }
+-                try { if (cfg.serviceWatchdogEnabled) ServiceWatchdogHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ServiceWatchdogHook FAIL: ${e.message}") }
+-                try { if (cfg.autoGrantHelperEnabled) AutoGrantHelperHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "AutoGrantHelperHook FAIL: ${e.message}") }
++                try { if (cfg.variantDetectEnabled) invokeHook("ShizukuVariantDetectorHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ShizukuVariantDetectorHook FAIL: ${e.message}") }
++                try { if (cfg.listInjectorEnabled) invokeHook("ShizukuListInjectorHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ShizukuListInjectorHook FAIL: ${e.message}") }
++                try { if (cfg.serviceWatchdogEnabled) invokeHook("ServiceWatchdogHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ServiceWatchdogHook FAIL: ${e.message}") }
++                try { if (cfg.autoGrantHelperEnabled) invokeHook("AutoGrantHelperHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "AutoGrantHelperHook FAIL: ${e.message}") }
+                 return
+             }
+         } catch (e: Throwable) {
+@@ -114,4 +107,26 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+         HookConfigReader.readGlobal()?.let { return it }
+         return try { com.mjh.shizukufix.utils.ConfigManager.getGlobalConfig() } catch (_: Throwable) { ShizukuFixConfig(packageName = "global") }
+     }
++    /** 铁律 1+2: 反射加载 Hook，避免 import 导致类加载冲突 */
++    private fun invokeHook(
++        name: String,
++        lpparam: de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam,
++        cfg: ShizukuFixConfig
++    ) {
++        try {
++            val cls = Class.forName("com.mjh.shizukufix.hooks." + name)
++            val m = cls.getDeclaredMethod(
++                "apply",
++                de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam::class.java,
++                ShizukuFixConfig::class.java
++            )
++            m.isAccessible = true
++            m.invoke(null, lpparam, cfg)
++        } catch (e: ClassNotFoundException) {
++            Log.e(TAG, name + " class not found")
++        } catch (e: Throwable) {
++            Log.e(TAG, name + " FAIL: " + e.message)
++        }
++    }
++
+ }
+diff --git a/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/XposedLoader.kt b/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/XposedLoader.kt
+index ce9c3b0..0fda20c 100755
+--- a/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/XposedLoader.kt
++++ b/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/XposedLoader.kt
+@@ -2,7 +2,6 @@ package com.stepmod.noroot
+ 
+ import android.util.Log
+ import com.stepmod.noroot.core.ConfigClient
+-import com.stepmod.noroot.hooks.*
+ import com.stepmod.noroot.models.StepConfig
+ import com.stepmod.noroot.utils.EnvDetector
+ import com.stepmod.noroot.utils.HookConfigReader
+@@ -80,25 +79,25 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+             val cfg = loadConfig()
+ 
+             Log.e(TAG, "Loading StepSensorHook...")
+-            try { if (cfg.stepModifyEnabled) StepSensorHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "StepSensorHook FAIL: ${e.message}") }
++            try { if (cfg.stepModifyEnabled) invokeHook("StepSensorHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "StepSensorHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading StepReportHook...")
+-            try { if (cfg.stepModifyEnabled) StepReportHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "StepReportHook FAIL: ${e.message}") }
++            try { if (cfg.stepModifyEnabled) invokeHook("StepReportHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "StepReportHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading StepCounterHook...")
+-            try { if (cfg.stepModifyEnabled) StepCounterHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "StepCounterHook FAIL: ${e.message}") }
++            try { if (cfg.stepModifyEnabled) invokeHook("StepCounterHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "StepCounterHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading ContentProviderInjectHook...")
+-            try { if (cfg.contentProviderInjectEnabled) ContentProviderInjectHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ContentProviderInjectHook FAIL: ${e.message}") }
++            try { if (cfg.contentProviderInjectEnabled) invokeHook("ContentProviderInjectHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ContentProviderInjectHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading SensorBlockHook...")
+-            try { if (cfg.sensorBlockEnabled) SensorBlockHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "SensorBlockHook FAIL: ${e.message}") }
++            try { if (cfg.sensorBlockEnabled) invokeHook("SensorBlockHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "SensorBlockHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading MultiAppSyncHook...")
+-            try { if (cfg.multiAppSyncEnabled) MultiAppSyncHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "MultiAppSyncHook FAIL: ${e.message}") }
++            try { if (cfg.multiAppSyncEnabled) invokeHook("MultiAppSyncHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "MultiAppSyncHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading StepHistoryFakeHook...")
+-            try { if (cfg.stepHistoryFakeEnabled) StepHistoryFakeHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "StepHistoryFakeHook FAIL: ${e.message}") }
++            try { if (cfg.stepHistoryFakeEnabled) invokeHook("StepHistoryFakeHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "StepHistoryFakeHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "===== All hooks loaded for $pkg =====")
+         } catch (e: Throwable) {
+@@ -119,4 +118,26 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+         HookConfigReader.readGlobal()?.let { return it }
+         return try { com.stepmod.noroot.utils.ConfigManager.getGlobalConfig() } catch (_: Throwable) { StepConfig(packageName = "global") }
+     }
++    /** 铁律 1+2: 反射加载 Hook，避免 import 导致类加载冲突 */
++    private fun invokeHook(
++        name: String,
++        lpparam: de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam,
++        cfg: StepConfig
++    ) {
++        try {
++            val cls = Class.forName("com.stepmod.noroot.hooks." + name)
++            val m = cls.getDeclaredMethod(
++                "apply",
++                de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam::class.java,
++                StepConfig::class.java
++            )
++            m.isAccessible = true
++            m.invoke(null, lpparam, cfg)
++        } catch (e: ClassNotFoundException) {
++            Log.e(TAG, name + " class not found")
++        } catch (e: Throwable) {
++            Log.e(TAG, name + " FAIL: " + e.message)
++        }
++    }
++
+ }
+diff --git a/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/XposedLoader.kt b/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/XposedLoader.kt
+index ad5c9a4..421bf8a 100755
+--- a/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/XposedLoader.kt
++++ b/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/XposedLoader.kt
+@@ -2,7 +2,6 @@ package com.videosaver.noroot
+ 
+ import android.util.Log
+ import com.videosaver.noroot.core.ConfigClient
+-import com.videosaver.noroot.hooks.*
+ import com.videosaver.noroot.models.VideoConfig
+ import com.videosaver.noroot.utils.EnvDetector
+ import com.videosaver.noroot.utils.HookConfigReader
+@@ -80,31 +79,31 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+             val cfg = loadConfig()
+ 
+             Log.e(TAG, "Loading DouyinNoWatermarkHook...")
+-            try { if (cfg.douyinNoWatermark) DouyinNoWatermarkHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "DouyinNoWatermarkHook FAIL: ${e.message}") }
++            try { if (cfg.douyinNoWatermark) invokeHook("DouyinNoWatermarkHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "DouyinNoWatermarkHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading KuaishouNoWatermarkHook...")
+-            try { if (cfg.kuaishouNoWatermark) KuaishouNoWatermarkHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "KuaishouNoWatermarkHook FAIL: ${e.message}") }
++            try { if (cfg.kuaishouNoWatermark) invokeHook("KuaishouNoWatermarkHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "KuaishouNoWatermarkHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading XhsNoWatermarkHook...")
+-            try { if (cfg.xhsNoWatermark) XhsNoWatermarkHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "XhsNoWatermarkHook FAIL: ${e.message}") }
++            try { if (cfg.xhsNoWatermark) invokeHook("XhsNoWatermarkHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "XhsNoWatermarkHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading BiliDownloadHook...")
+-            try { if (cfg.biliDownload) BiliDownloadHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "BiliDownloadHook FAIL: ${e.message}") }
++            try { if (cfg.biliDownload) invokeHook("BiliDownloadHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "BiliDownloadHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading ShizukuCaptureHook...")
+-            try { if (cfg.shizukuCaptureEnabled) ShizukuCaptureHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ShizukuCaptureHook FAIL: ${e.message}") }
++            try { if (cfg.shizukuCaptureEnabled) invokeHook("ShizukuCaptureHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ShizukuCaptureHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading AutoDownloadHook...")
+-            try { if (cfg.autoDownloadEnabled) AutoDownloadHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "AutoDownloadHook FAIL: ${e.message}") }
++            try { if (cfg.autoDownloadEnabled) invokeHook("AutoDownloadHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "AutoDownloadHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading RemoveVideoAdsHook...")
+-            try { if (cfg.removeAdsEnabled) RemoveVideoAdsHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "RemoveVideoAdsHook FAIL: ${e.message}") }
++            try { if (cfg.removeAdsEnabled) invokeHook("RemoveVideoAdsHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "RemoveVideoAdsHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading SaveOriginalQualityHook...")
+-            try { if (cfg.saveOriginalQualityEnabled) SaveOriginalQualityHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "SaveOriginalQualityHook FAIL: ${e.message}") }
++            try { if (cfg.saveOriginalQualityEnabled) invokeHook("SaveOriginalQualityHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "SaveOriginalQualityHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading BatchDownloadHook...")
+-            try { if (cfg.batchDownloadEnabled) BatchDownloadHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "BatchDownloadHook FAIL: ${e.message}") }
++            try { if (cfg.batchDownloadEnabled) invokeHook("BatchDownloadHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "BatchDownloadHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "===== All hooks loaded for $pkg =====")
+         } catch (e: Throwable) {
+@@ -124,4 +123,26 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+         HookConfigReader.readGlobal()?.let { return it }
+         return try { com.videosaver.noroot.utils.ConfigManager.getGlobalConfig() } catch (_: Throwable) { VideoConfig(packageName = "global") }
+     }
++    /** 铁律 1+2: 反射加载 Hook，避免 import 导致类加载冲突 */
++    private fun invokeHook(
++        name: String,
++        lpparam: de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam,
++        cfg: VideoConfig
++    ) {
++        try {
++            val cls = Class.forName("com.videosaver.noroot.hooks." + name)
++            val m = cls.getDeclaredMethod(
++                "apply",
++                de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam::class.java,
++                VideoConfig::class.java
++            )
++            m.isAccessible = true
++            m.invoke(null, lpparam, cfg)
++        } catch (e: ClassNotFoundException) {
++            Log.e(TAG, name + " class not found")
++        } catch (e: Throwable) {
++            Log.e(TAG, name + " FAIL: " + e.message)
++        }
++    }
++
+ }
+diff --git a/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/XposedLoader.kt b/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/XposedLoader.kt
+index cff5fcf..c81b856 100755
+--- a/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/XposedLoader.kt
++++ b/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/XposedLoader.kt
+@@ -2,7 +2,6 @@ package com.vipunlock.noroot
+ 
+ import android.util.Log
+ import com.vipunlock.noroot.core.ConfigClient
+-import com.vipunlock.noroot.hooks.*
+ import com.vipunlock.noroot.models.VipConfig
+ import com.vipunlock.noroot.utils.EnvDetector
+ import com.vipunlock.noroot.utils.HookConfigReader
+@@ -81,10 +80,10 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+             cfg.packageName = pkg
+ 
+             Log.e(TAG, "Loading NetEaseMusicVipHook...")
+-            try { if (cfg.netEaseVipEnabled && pkg == "com.netease.cloudmusic") NetEaseMusicVipHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "NetEaseMusicVipHook FAIL: ${e.message}") }
++            try { if (cfg.netEaseVipEnabled && pkg == "com.netease.cloudmusic") invokeHook("NetEaseMusicVipHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "NetEaseMusicVipHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading QQMusicVipHook...")
+-            try { if (cfg.qqMusicVipEnabled && pkg == "com.tencent.wmusic") QQMusicVipHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "QQMusicVipHook FAIL: ${e.message}") }
++            try { if (cfg.qqMusicVipEnabled && pkg == "com.tencent.wmusic") invokeHook("QQMusicVipHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "QQMusicVipHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading KugouVipHook...")
+             try { if (cfg.kugouVipEnabled && pkg == "com.kugou.android") UniversalVipHook.applyForKugou(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "KugouVipHook FAIL: ${e.message}") }
+@@ -93,7 +92,7 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+             try { if (cfg.kuwoVipEnabled && pkg == "com.kuwo.player") UniversalVipHook.applyForKuwo(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "KuwoVipHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading IqiyiVipHook...")
+-            try { if (cfg.iqiyiVipEnabled && pkg == "com.qiyi.video") IqiyiVipHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "IqiyiVipHook FAIL: ${e.message}") }
++            try { if (cfg.iqiyiVipEnabled && pkg == "com.qiyi.video") invokeHook("IqiyiVipHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "IqiyiVipHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading YoukuVipHook...")
+             try { if (cfg.youkuVipEnabled && pkg == "com.youku.phone") UniversalVipHook.applyForYouku(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "YoukuVipHook FAIL: ${e.message}") }
+@@ -102,7 +101,7 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+             try { if (cfg.tencentVideoVipEnabled && pkg == "com.tencent.qqlive") UniversalVipHook.applyForTencentVideo(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "TencentVideoVipHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading BilibiliVipHook...")
+-            try { if (cfg.biliVipEnabled && pkg == "tv.danmaku.bili") BilibiliVipHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "BilibiliVipHook FAIL: ${e.message}") }
++            try { if (cfg.biliVipEnabled && pkg == "tv.danmaku.bili") invokeHook("BilibiliVipHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "BilibiliVipHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading XimalayaVipHook...")
+             try { if (cfg.ximalayaVipEnabled && pkg == "com.ximalaya.ting.android") UniversalVipHook.applyForXimalaya(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "XimalayaVipHook FAIL: ${e.message}") }
+@@ -126,13 +125,13 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+             try { if (cfg.universalVipTryEnabled) UniversalVipHook.applyForCommon(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "UniversalVipHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading RemoveAdsHook...")
+-            try { if (cfg.removeAdsEnabled) RemoveAdsHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "RemoveAdsHook FAIL: ${e.message}") }
++            try { if (cfg.removeAdsEnabled) invokeHook("RemoveAdsHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "RemoveAdsHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading BypassVerifyHook...")
+-            try { if (cfg.bypassVerifyEnabled) BypassVerifyHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "BypassVerifyHook FAIL: ${e.message}") }
++            try { if (cfg.bypassVerifyEnabled) invokeHook("BypassVerifyHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "BypassVerifyHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "Loading ShizukuVipDbHook...")
+-            try { if (cfg.shizukuVipDbEnabled) ShizukuVipDbHook.apply(lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ShizukuVipDbHook FAIL: ${e.message}") }
++            try { if (cfg.shizukuVipDbEnabled) invokeHook("ShizukuVipDbHook", lpparam, cfg) } catch (e: Throwable) { Log.e(TAG, "ShizukuVipDbHook FAIL: ${e.message}") }
+ 
+             Log.e(TAG, "===== All hooks loaded for $pkg =====")
+         } catch (e: Throwable) {
+@@ -152,4 +151,26 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+         HookConfigReader.readGlobal()?.let { return it }
+         return try { com.vipunlock.noroot.utils.ConfigManager.getGlobalConfig() } catch (_: Throwable) { VipConfig(packageName = "global") }
+     }
++    /** 铁律 1+2: 反射加载 Hook，避免 import 导致类加载冲突 */
++    private fun invokeHook(
++        name: String,
++        lpparam: de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam,
++        cfg: VipConfig
++    ) {
++        try {
++            val cls = Class.forName("com.vipunlocker.noroot.hooks." + name)
++            val m = cls.getDeclaredMethod(
++                "apply",
++                de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam::class.java,
++                VipConfig::class.java
++            )
++            m.isAccessible = true
++            m.invoke(null, lpparam, cfg)
++        } catch (e: ClassNotFoundException) {
++            Log.e(TAG, name + " class not found")
++        } catch (e: Throwable) {
++            Log.e(TAG, name + " FAIL: " + e.message)
++        }
++    }
++
+ }

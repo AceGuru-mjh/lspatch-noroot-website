@@ -132,3 +132,45 @@ Stage Summary:
 - 6 条踩坑记录(11-16)：import 秒崩 / MODE_WORLD_READABLE / prefs 名不一致 / String+classLoader 找不到类 / 进程未分支 ANR / CI 签名不匹配
 - 9 个修正后源码可直接覆盖到仓库对应路径
 - 全部经 Agent Browser 验证通过，零控制台错误
+
+---
+Task ID: 3-spec-fix
+Agent: main (Z.ai Code)
+Task: spec 模式完全修复 — 克隆仓库 + 自动修复 11 模块 + 生成可下载 patch 包
+
+Work Log:
+- 克隆 https://github.com/AceGuru-mjh/LSPatch-Noroot-modle.git 到 /tmp（depth=1）
+- 检查真实代码状态，确认三层根因：
+  · CI 签名不匹配：build.yml env 设 debug123/debug 但未设 MJH_STORE_FILE → 用默认 mjh-release.jks(meng411722/mjh) → 密码不匹配
+  · 11 模块全部违反铁律1：import xxx.hooks.* （AdBlockerX 11条、ShizukuSceneFix 7条、其余各1条通配）
+  · release job tag_name 硬编码 v1.0.11，body 写"10 个 LSPosed Root 模块"（应为 11 NoRoot）
+- 编写 fix_xposed_loaders.py 自动修复脚本：
+  · 自动删除所有 import xxx.hooks.* 语句
+  · 自动检测 Config 类名（GameConfig/AudioConfig/...等 8 种）
+  · 将 XxxHook.apply(lpparam, cfg) 替换为 invokeHook("XxxHook", lpparam, cfg)
+  · 添加 invokeHook() 反射辅助方法（Class.forName + getDeclaredMethod + invoke）
+  · 运行结果：11/11 模块修复，删除 26 条 import，替换 89 处 Hook 调用
+- 特殊模块修复：
+  · AdBlockerX：Config 类型从 ModuleConfig 修正为 AdBlockConfig（loadConfig 返回类型）
+  · MicroXEnhancer：使用 .hook(lpparam) 模式（无 cfg），单独编写 fix_microx.py，新增 invokeHookNoCfg 辅助方法，替换 12 处
+- 修复 build.yml：
+  · 添加 MJH_STORE_FILE: ${{ github.workspace }}/modules/keystore/debug.jks
+  · 4 项 env 全部对齐 debug123/debug
+  · tag_name: v1.0.11 → v1.0.12
+  · body 修正为"11 个免 Root 模块"
+- 生成 git diff patch（934 行，12 文件）
+- 创建 apply.sh 一键应用脚本（含铁律验证 + CI 签名验证）
+- 复制修复包到 public/fix-package/（patch + apply.sh + py脚本 + README）
+- 创建 DownloadTab 组件：统计卡片 + 4 文件下载卡 + 6 步应用指南 + 3 卡修复详情 + 验证结果
+- page.tsx 新增"完整修复包"Tab（设为默认 Tab）
+- Agent Browser 验证：
+  · 4 个文件全部 HTTP 200 可下载
+  · 页面零错误
+  · 移动端 390x844 响应式正常
+  · Tab 切换正常
+
+Stage Summary:
+- 交付完整可下载修复包：/fix-package/lspatch-noroot-fix-v1.0.12.patch (63KB, 934行, 12文件)
+- 用户操作路径：下载 patch → git clone 仓库 → bash apply.sh → git push → Actions 自动构建 v1.0.12
+- 修复覆盖：CI 签名(致命) + 铁律1(11模块26条import) + 铁律2(89处反射替换) + 版本号(v1.0.12)
+- 本地已验证：11/11 模块零 import hooks/* 残留，89 处 Hook 调用全部反射化

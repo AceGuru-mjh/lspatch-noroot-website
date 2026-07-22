@@ -174,3 +174,38 @@ Stage Summary:
 - 用户操作路径：下载 patch → git clone 仓库 → bash apply.sh → git push → Actions 自动构建 v1.0.12
 - 修复覆盖：CI 签名(致命) + 铁律1(11模块26条import) + 铁律2(89处反射替换) + 版本号(v1.0.12)
 - 本地已验证：11/11 模块零 import hooks/* 残留，89 处 Hook 调用全部反射化
+
+---
+Task ID: 4-verify-plan
+Agent: main (Z.ai Code)
+Task: 检查 v1.0.12 构建状态 + 诊断运行时风险 + 制定迭代计划
+
+Work Log:
+- 检查 v1.0.12 Release：11 个 APK 全部生成（各 12.1 MB），APK 下载链接 HTTP 302 可用
+- 克隆最新仓库代码检查实际合并状态：
+  · 最近 3 commits: da8f366(OkHttpAdHook语法) / 0cb671f(CI简化) / ce23f04(keystore alias)
+  · 用户通过 GitHub Secrets 配置签名凭据修复 CI（非我的 patch 方式），构建成功
+  · 但铁律1-3 修复全部未合并！
+- 诊断 5 个运行时风险：
+  · 致命: 11 模块仍 27 条 import hooks/*（集成模式秒崩）
+  · 致命: ConfigProvider/ConfigManager prefs 名不一致（AdBlockerX: adblockerx_noroot vs adblockerx；GameUnlockerPro: game_unlocker vs gameunlocker）
+  · 高危: 11 模块 ConfigManager + LogStore 仍用 MODE_WORLD_READABLE
+  · 中危: 铁律2部分违反（Hook用String+classLoader重载）
+  · 中危: 11 模块 VERSION 常量仍为 1.0.11
+- 制定 6 个版本迭代计划（v1.0.13 → v1.2.0）：
+  · v1.0.13 P0: 铁律1全量修复（应用patch）
+  · v1.0.14 P0: IPC配置链修复（prefs名统一+删MODE_WORLD_READABLE）
+  · v1.0.15 P1: 铁律2全反射+版本号统一
+  · v1.0.16 P1: 铁律3双分支强化+悬浮球健壮性
+  · v1.1.0 P2: M3毛玻璃悬浮球UI升级（对照Web预览移植）
+  · v1.2.0 P3: 新模块扩展+CI自动体检门禁
+- 创建 IterationPlan 组件：构建结果11卡片 + 5风险诊断卡 + 6迭代路线卡 + 行动建议
+- page.tsx 新增"构建检查 & 迭代计划"Tab（设为默认 Tab）
+- Agent Browser 验证：6 迭代卡片渲染、5 风险卡片渲染、移动端响应式正常、零错误
+
+Stage Summary:
+- v1.0.12 构建成功（11 APK 已发布），但铁律修复未合并 → APK 能安装但集成模式秒崩
+- 建议在 v1.0.12 Release 说明标注"已知问题：集成模式待 v1.0.13 修复"
+- 最快路径：应用"完整修复包"Tab 的 patch → push → v1.0.13
+- 完整迭代路线：v1.0.13(铁律1) → v1.0.14(IPC) → v1.0.15(铁律2) → v1.0.16(铁律3) → v1.1.0(M3悬浮球) → v1.2.0(扩展)
+- v1.0.13 + v1.0.14 合修后 APK 才真正可用

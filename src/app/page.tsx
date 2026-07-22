@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Github, ShieldCheck, Eye, Wrench, ClipboardList, GitCompareArrows, Sparkles, Download } from "lucide-react";
+import { Github, ShieldCheck, Eye, Wrench, ClipboardList, GitCompareArrows, Sparkles, Download, Rocket } from "lucide-react";
 import { getModule, paletteToCssVars } from "@/lib/lsp-modules";
 import { PreviewTab } from "@/components/lsp/PreviewTab";
 import { IronRules } from "@/components/lsp/IronRules";
@@ -10,8 +10,9 @@ import { CodeViewer } from "@/components/lsp/CodeViewer";
 import { ChecklistAndBugs } from "@/components/lsp/ChecklistAndBugs";
 import { ArchitectureCompare } from "@/components/lsp/ArchitectureCompare";
 import { DownloadTab } from "@/components/lsp/DownloadTab";
+import { IterationPlan } from "@/components/lsp/IterationPlan";
 
-type TabId = "download" | "preview" | "rules" | "code" | "checklist" | "arch";
+type TabId = "plan" | "download" | "preview" | "rules" | "code" | "checklist" | "arch";
 
 interface TabDef {
   id: TabId;
@@ -21,6 +22,7 @@ interface TabDef {
 }
 
 const TABS: TabDef[] = [
+  { id: "plan", label: "构建检查 & 迭代计划", short: "迭代", icon: Rocket },
   { id: "download", label: "完整修复包", short: "下载", icon: Download },
   { id: "preview", label: "悬浮球预览", short: "预览", icon: Eye },
   { id: "rules", label: "三大铁律", short: "铁律", icon: ShieldCheck },
@@ -30,7 +32,7 @@ const TABS: TabDef[] = [
 ];
 
 export default function Home() {
-  const [tab, setTab] = useState<TabId>("download");
+  const [tab, setTab] = useState<TabId>("plan");
   // 预览 tab 需要动态配色（跟随激活模块）；其他 tab 用默认 M3 绿
   const previewMod = getModule("adblocker");
 
@@ -126,6 +128,7 @@ export default function Home() {
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.25 }}
           >
+            {tab === "plan" && <IterationPlan />}
             {tab === "download" && <DownloadTab />}
             {tab === "preview" && <PreviewTab />}
             {tab === "rules" && (

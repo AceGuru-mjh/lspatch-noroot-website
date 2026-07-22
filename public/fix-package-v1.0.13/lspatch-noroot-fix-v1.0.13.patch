@@ -1,47 +1,35 @@
 diff --git a/.github/workflows/build.yml b/.github/workflows/build.yml
-index a3995a0..d3ebf17 100644
+index 41b41b1..364dd50 100644
 --- a/.github/workflows/build.yml
 +++ b/.github/workflows/build.yml
-@@ -45,9 +45,10 @@ jobs:
-       - name: Build Release APK
-         working-directory: modules/${{ matrix.module }}
-         env:
--          MJH_STORE_PASSWORD: ${{ secrets.MJH_STORE_PASSWORD || 'debug123' }}
--          MJH_KEY_ALIAS: ${{ secrets.MJH_KEY_ALIAS || 'debug' }}
--          MJH_KEY_PASSWORD: ${{ secrets.MJH_KEY_PASSWORD || 'debug123' }}
-+          MJH_STORE_FILE: ${{ github.workspace }}/modules/keystore/debug.jks
-+          MJH_STORE_PASSWORD: debug123
-+          MJH_KEY_ALIAS: debug
-+          MJH_KEY_PASSWORD: debug123
-         run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
-       - name: Rename APK
-         run: |
-@@ -71,12 +72,17 @@ jobs:
+@@ -63,8 +63,8 @@ jobs:
            find all-apks -name "*.apk" | while read f; do cp "$f" "release-assets/$(basename "$f")"; done
        - uses: softprops/action-gh-release@v2
          with:
--          tag_name: v1.0.11
--          name: LSPatch-Noroot-modle 模块合集 v1.0.11
-+          tag_name: v1.0.12
-+          name: LSPatch-Noroot-modle 模块合集 v1.0.12
-           body: |
--            # LSPatch-Noroot-modle v1.0.11
--            10 个 LSPosed Root 模块 APK
-+            # LSPatch-Noroot-modle v1.0.12
-+            
-+            ## 三大铁律修复版
-+            - 铁律 1: XposedLoader 零 import hooks/* (全部改为反射)
-+            - 铁律 2: Hook 调用用 Class.forName().getDeclaredMethod().invoke()
-+            - 铁律 3: 进程双分支 (自身进程→UI，宿主进程→纯Hook)
-+            - CI 签名修复: MJH_STORE_FILE 指向 debug.jks
-+            
-+            ## 包含 11 个免 Root 模块
-             开发者：MJH
+-          tag_name: v1.0.12
+-          name: LSPatch-Noroot-modle v1.0.12
++          tag_name: v1.0.13
++          name: LSPatch-Noroot-modle 模块合集 v1.0.13
+           body: "11 LSPatch NoRoot modules. Dev: MJH"
            files: release-assets/*.apk
--          prerelease: false
--          draft: false
+           prerelease: false
+diff --git a/modules/AdBlockerX_NoRoot/app/build.gradle.kts b/modules/AdBlockerX_NoRoot/app/build.gradle.kts
+index 9eaee53..a6b8206 100755
+--- a/modules/AdBlockerX_NoRoot/app/build.gradle.kts
++++ b/modules/AdBlockerX_NoRoot/app/build.gradle.kts
+@@ -11,8 +11,8 @@ android {
+         applicationId = "com.adblockerx.noroot"
+         minSdk = 26
+         targetSdk = 34
+-        versionCode = 1
+-        versionName = "1.0.11"
++        versionCode = 13
++        versionName = "1.0.13"
+     }
+ 
+     signingConfigs {
 diff --git a/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/XposedLoader.kt b/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/XposedLoader.kt
-index f977765..79012aa 100755
+index f977765..917d16f 100755
 --- a/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/XposedLoader.kt
 +++ b/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/XposedLoader.kt
 @@ -2,17 +2,6 @@ package com.adblockerx.noroot
@@ -62,6 +50,15 @@ index f977765..79012aa 100755
  import com.adblockerx.noroot.utils.EnvDetector
  import com.adblockerx.noroot.utils.HookConfigReader
  import de.robv.android.xposed.IXposedHookLoadPackage
+@@ -22,7 +11,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
+ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+ 
+     companion object {
+-        const val VERSION = "1.0.11"
++        const val VERSION = "1.0.13"
+         const val TAG = "LSP-AdBlockerX"
+         const val MODULE_PKG = "com.adblockerx.noroot"
+         var currentPkg: String? = null
 @@ -89,37 +78,37 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
              val cfg = loadConfig()
  
@@ -119,14 +116,14 @@ index f977765..79012aa 100755
 +    private fun invokeHook(
 +        name: String,
 +        lpparam: de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam,
-+        cfg: ModuleConfig
++        cfg: AdBlockConfig
 +    ) {
 +        try {
 +            val cls = Class.forName("com.adblockerx.noroot.hooks." + name)
 +            val m = cls.getDeclaredMethod(
 +                "apply",
 +                de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam::class.java,
-+                com.adblockerx.noroot.models.AdBlockConfig::class.java
++                AdBlockConfig::class.java
 +            )
 +            m.isAccessible = true
 +            m.invoke(null, lpparam, cfg)
@@ -138,8 +135,76 @@ index f977765..79012aa 100755
 +    }
 +
  }
+diff --git a/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/utils/ConfigManager.kt b/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/utils/ConfigManager.kt
+index 04fb207..a4290dc 100755
+--- a/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/utils/ConfigManager.kt
++++ b/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/utils/ConfigManager.kt
+@@ -14,11 +14,11 @@ import com.google.gson.reflect.TypeToken
+  *  2. Hook 侧（目标APP进程）：通过 XSharedPreferences 读取模块 prefs（LSPosed模式）
+  *     或通过 Context.getSharedPreferences 读取（LSPatch本地模式，同进程）
+  *
+- * LSPosed 兼容：prefs 使用 MODE_WORLD_READABLE（LSPosed 拦截并放行），失败回退 MODE_PRIVATE。
++ * LSPosed 兼容：prefs 使用 MODE_PRIVATE（LSPosed 拦截并放行），失败回退 MODE_PRIVATE。
+  */
+ object ConfigManager {
+ 
+-    const val PREFS_NAME = "adblockerx_noroot_prefs"
++    const val PREFS_NAME = "adblockerx_prefs"
+     private const val KEY_GLOBAL = "global_config"
+     private const val KEY_BLOCKED_COUNT = "blocked_count"
+ 
+@@ -28,7 +28,7 @@ object ConfigManager {
+     fun init(ctx: Context) {
+         if (prefs != null) return
+         prefs = try {
+-            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE)
++            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         } catch (_: Throwable) {
+             ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         }
+diff --git a/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/utils/HookConfigReader.kt b/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/utils/HookConfigReader.kt
+index bc6d8c2..782a827 100755
+--- a/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/utils/HookConfigReader.kt
++++ b/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/utils/HookConfigReader.kt
+@@ -21,7 +21,7 @@ object HookConfigReader {
+     fun readGlobal(): AdBlockConfig? {
+         return try {
+             val xsp = de.robv.android.xposed.XSharedPreferences(MODULE_PKG, ConfigManager.PREFS_NAME)
+-            xsp.makeWorldReadable()
++            xsp
+             val json = xsp.getString("global_config", null) ?: return null
+             gson.fromJson(json, AdBlockConfig::class.java)
+         } catch (_: Throwable) { null }
+diff --git a/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/utils/LogStore.kt b/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/utils/LogStore.kt
+index 6fd8282..5dfbc2a 100644
+--- a/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/utils/LogStore.kt
++++ b/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/utils/LogStore.kt
+@@ -29,7 +29,7 @@ object LogStore {
+     fun init(ctx: Context) {
+         if (prefs != null) return
+         prefs = try {
+-            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE)
++            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         } catch (_: Throwable) {
+             try { ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) } catch (_: Throwable) { null }
+         }
+diff --git a/modules/AudioBoost_NoRoot/app/build.gradle.kts b/modules/AudioBoost_NoRoot/app/build.gradle.kts
+index 1f107c8..050c17b 100755
+--- a/modules/AudioBoost_NoRoot/app/build.gradle.kts
++++ b/modules/AudioBoost_NoRoot/app/build.gradle.kts
+@@ -11,8 +11,8 @@ android {
+         applicationId = "com.audioboost.noroot"
+         minSdk = 26
+         targetSdk = 34
+-        versionCode = 1
+-        versionName = "1.0.11"
++        versionCode = 13
++        versionName = "1.0.13"
+     }
+ 
+     signingConfigs {
 diff --git a/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/XposedLoader.kt b/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/XposedLoader.kt
-index a9d05a0..bc1ee5d 100755
+index a9d05a0..808113c 100755
 --- a/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/XposedLoader.kt
 +++ b/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/XposedLoader.kt
 @@ -2,7 +2,6 @@ package com.audioboost.noroot
@@ -150,6 +215,15 @@ index a9d05a0..bc1ee5d 100755
  import com.audioboost.noroot.models.AudioConfig
  import com.audioboost.noroot.utils.EnvDetector
  import com.audioboost.noroot.utils.HookConfigReader
+@@ -13,7 +12,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
+ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+ 
+     companion object {
+-        const val VERSION = "1.0.11"
++        const val VERSION = "1.0.13"
+         const val TAG = "LSP-AudioBoost"
+         const val MODULE_PKG = "com.audioboost.noroot"
+         var currentPkg: String? = null
 @@ -80,25 +79,25 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
              val cfg = loadConfig()
  
@@ -210,8 +284,76 @@ index a9d05a0..bc1ee5d 100755
 +    }
 +
  }
+diff --git a/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/utils/ConfigManager.kt b/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/utils/ConfigManager.kt
+index 801c8b2..24a3673 100755
+--- a/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/utils/ConfigManager.kt
++++ b/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/utils/ConfigManager.kt
+@@ -14,11 +14,11 @@ import com.audioboost.noroot.models.AudioConfig
+  *  2. Hook 侧（目标APP进程）：通过 XSharedPreferences 读取模块 prefs（LSPosed模式）
+  *     或通过 Context.getSharedPreferences 读取（LSPatch本地模式，同进程）
+  *
+- * LSPosed 兼容：prefs 使用 MODE_WORLD_READABLE（LSPosed 拦截并放行），失败回退 MODE_PRIVATE。
++ * LSPosed 兼容：prefs 使用 MODE_PRIVATE（LSPosed 拦截并放行），失败回退 MODE_PRIVATE。
+  */
+ object ConfigManager {
+ 
+-    const val PREFS_NAME = "audio_boost_prefs"
++    const val PREFS_NAME = "audioboost_prefs"
+     private const val KEY_ALL = "all_app_configs"
+     private const val KEY_GLOBAL = "global_config"
+ 
+@@ -28,7 +28,7 @@ object ConfigManager {
+     fun init(ctx: Context) {
+         if (prefs != null) return
+         prefs = try {
+-            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE)
++            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         } catch (_: Throwable) {
+             ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         }
+diff --git a/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/utils/HookConfigReader.kt b/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/utils/HookConfigReader.kt
+index aacb75b..71d2884 100755
+--- a/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/utils/HookConfigReader.kt
++++ b/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/utils/HookConfigReader.kt
+@@ -21,7 +21,7 @@ object HookConfigReader {
+     fun readGlobal(): AudioConfig? {
+         return try {
+             val xsp = de.robv.android.xposed.XSharedPreferences(MODULE_PKG, ConfigManager.PREFS_NAME)
+-            xsp.makeWorldReadable()
++            xsp
+             val json = xsp.getString("global_config", null) ?: return null
+             gson.fromJson(json, AudioConfig::class.java)
+         } catch (_: Throwable) { null }
+diff --git a/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/utils/LogStore.kt b/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/utils/LogStore.kt
+index fb191e8..442b6e4 100644
+--- a/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/utils/LogStore.kt
++++ b/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/utils/LogStore.kt
+@@ -29,7 +29,7 @@ object LogStore {
+     fun init(ctx: Context) {
+         if (prefs != null) return
+         prefs = try {
+-            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE)
++            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         } catch (_: Throwable) {
+             try { ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) } catch (_: Throwable) { null }
+         }
+diff --git a/modules/BatteryOptimizer_NoRoot/app/build.gradle.kts b/modules/BatteryOptimizer_NoRoot/app/build.gradle.kts
+index b772b7a..2822a1a 100755
+--- a/modules/BatteryOptimizer_NoRoot/app/build.gradle.kts
++++ b/modules/BatteryOptimizer_NoRoot/app/build.gradle.kts
+@@ -11,8 +11,8 @@ android {
+         applicationId = "com.batteryopt.noroot"
+         minSdk = 26
+         targetSdk = 34
+-        versionCode = 1
+-        versionName = "1.0.11"
++        versionCode = 13
++        versionName = "1.0.13"
+     }
+ 
+     signingConfigs {
 diff --git a/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/XposedLoader.kt b/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/XposedLoader.kt
-index ab0dea9..f24ed5d 100755
+index ab0dea9..c125d2d 100755
 --- a/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/XposedLoader.kt
 +++ b/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/XposedLoader.kt
 @@ -2,7 +2,6 @@ package com.batteryopt.noroot
@@ -222,6 +364,15 @@ index ab0dea9..f24ed5d 100755
  import com.batteryopt.noroot.models.BatteryConfig
  import com.batteryopt.noroot.utils.EnvDetector
  import com.batteryopt.noroot.utils.HookConfigReader
+@@ -13,7 +12,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
+ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+ 
+     companion object {
+-        const val VERSION = "1.0.11"
++        const val VERSION = "1.0.13"
+         const val TAG = "LSP-BatteryOpt"
+         const val MODULE_PKG = "com.batteryopt.noroot"
+         var currentPkg: String? = null
 @@ -80,37 +79,37 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
              val cfg = loadConfig()
  
@@ -298,8 +449,89 @@ index ab0dea9..f24ed5d 100755
 +    }
 +
  }
+diff --git a/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/core/ConfigProvider.kt b/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/core/ConfigProvider.kt
+index 1ecc760..2376209 100644
+--- a/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/core/ConfigProvider.kt
++++ b/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/core/ConfigProvider.kt
+@@ -15,7 +15,7 @@ class ConfigProvider : ContentProvider() {
+     }
+ 
+     override fun query(uri: Uri, proj: Array<String>?, sel: String?, selArgs: Array<String>?, sort: String?): android.database.Cursor? {
+-        val sp = context?.getSharedPreferences("batteryopt_prefs", android.content.Context.MODE_PRIVATE)
++        val sp = context?.getSharedPreferences("batteryoptimizer_prefs", android.content.Context.MODE_PRIVATE)
+         val cursor = MatrixCursor(arrayOf("key", "value"))
+         sp?.all?.forEach { (k, v) ->
+             cursor.addRow(arrayOf(k, v.toString()))
+diff --git a/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/utils/ConfigManager.kt b/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/utils/ConfigManager.kt
+index 52ee4ed..7ea2a8d 100755
+--- a/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/utils/ConfigManager.kt
++++ b/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/utils/ConfigManager.kt
+@@ -13,11 +13,11 @@ import com.google.gson.Gson
+  *  2. Hook 侧（目标APP进程）：通过 XSharedPreferences 读取模块 prefs（LSPosed模式）
+  *     或通过 Context.getSharedPreferences 读取（LSPatch本地模式，同进程）
+  *
+- * LSPosed 兼容：prefs 使用 MODE_WORLD_READABLE（LSPosed 拦截并放行），失败回退 MODE_PRIVATE。
++ * LSPosed 兼容：prefs 使用 MODE_PRIVATE（LSPosed 拦截并放行），失败回退 MODE_PRIVATE。
+  */
+ object ConfigManager {
+ 
+-    const val PREFS_NAME = "battery_optimizer_prefs"
++    const val PREFS_NAME = "batteryoptimizer_prefs"
+     private const val KEY_GLOBAL = "global_config"
+ 
+     private val gson = Gson()
+@@ -26,7 +26,7 @@ object ConfigManager {
+     fun init(ctx: Context) {
+         if (prefs != null) return
+         prefs = try {
+-            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE)
++            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         } catch (_: Throwable) {
+             ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         }
+diff --git a/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/utils/HookConfigReader.kt b/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/utils/HookConfigReader.kt
+index 6223acd..62c98b9 100755
+--- a/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/utils/HookConfigReader.kt
++++ b/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/utils/HookConfigReader.kt
+@@ -21,7 +21,7 @@ object HookConfigReader {
+     fun readGlobal(): BatteryConfig? {
+         return try {
+             val xsp = de.robv.android.xposed.XSharedPreferences(MODULE_PKG, ConfigManager.PREFS_NAME)
+-            xsp.makeWorldReadable()
++            xsp
+             val json = xsp.getString("global_config", null) ?: return null
+             gson.fromJson(json, BatteryConfig::class.java)
+         } catch (_: Throwable) { null }
+diff --git a/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/utils/LogStore.kt b/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/utils/LogStore.kt
+index 548bfb1..22cac8b 100644
+--- a/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/utils/LogStore.kt
++++ b/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/utils/LogStore.kt
+@@ -29,7 +29,7 @@ object LogStore {
+     fun init(ctx: Context) {
+         if (prefs != null) return
+         prefs = try {
+-            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE)
++            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         } catch (_: Throwable) {
+             try { ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) } catch (_: Throwable) { null }
+         }
+diff --git a/modules/GameUnlockerPro_NoRoot/app/build.gradle.kts b/modules/GameUnlockerPro_NoRoot/app/build.gradle.kts
+index 3bb491e..e9931c6 100755
+--- a/modules/GameUnlockerPro_NoRoot/app/build.gradle.kts
++++ b/modules/GameUnlockerPro_NoRoot/app/build.gradle.kts
+@@ -11,8 +11,8 @@ android {
+         applicationId = "com.gameunlocker.noroot"
+         minSdk = 26
+         targetSdk = 34
+-        versionCode = 1
+-        versionName = "1.0.11"
++        versionCode = 13
++        versionName = "1.0.13"
+     }
+ 
+     signingConfigs {
 diff --git a/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/XposedLoader.kt b/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/XposedLoader.kt
-index 6b43dc5..1f6a375 100755
+index 6b43dc5..96b92bd 100755
 --- a/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/XposedLoader.kt
 +++ b/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/XposedLoader.kt
 @@ -2,7 +2,6 @@ package com.gameunlocker.noroot
@@ -310,6 +542,15 @@ index 6b43dc5..1f6a375 100755
  import com.gameunlocker.noroot.models.GameConfig
  import com.gameunlocker.noroot.utils.EnvDetector
  import com.gameunlocker.noroot.utils.HookConfigReader
+@@ -13,7 +12,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
+ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+ 
+     companion object {
+-        const val VERSION = "1.0.11"
++        const val VERSION = "1.0.13"
+         const val TAG = "LSP-GameUnlocker"
+         const val MODULE_PKG = "com.gameunlocker.noroot"
+         var currentPkg: String? = null
 @@ -80,34 +79,34 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
              val cfg = loadConfig()
  
@@ -382,8 +623,89 @@ index 6b43dc5..1f6a375 100755
 +    }
 +
  }
+diff --git a/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/core/ConfigProvider.kt b/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/core/ConfigProvider.kt
+index 20ec39e..8c1baf5 100644
+--- a/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/core/ConfigProvider.kt
++++ b/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/core/ConfigProvider.kt
+@@ -15,7 +15,7 @@ class ConfigProvider : ContentProvider() {
+     }
+ 
+     override fun query(uri: Uri, proj: Array<String>?, sel: String?, selArgs: Array<String>?, sort: String?): android.database.Cursor? {
+-        val sp = context?.getSharedPreferences("gameunlocker_prefs", android.content.Context.MODE_PRIVATE)
++        val sp = context?.getSharedPreferences("gameunlockerpro_prefs", android.content.Context.MODE_PRIVATE)
+         val cursor = MatrixCursor(arrayOf("key", "value"))
+         sp?.all?.forEach { (k, v) ->
+             cursor.addRow(arrayOf(k, v.toString()))
+diff --git a/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/utils/ConfigManager.kt b/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/utils/ConfigManager.kt
+index e19a071..0ba7122 100755
+--- a/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/utils/ConfigManager.kt
++++ b/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/utils/ConfigManager.kt
+@@ -14,11 +14,11 @@ import com.google.gson.reflect.TypeToken
+  *  2. Hook 侧（目标APP进程）：通过 XSharedPreferences 读取模块 prefs（LSPosed模式）
+  *     或通过 Context.getSharedPreferences 读取（LSPatch本地模式，同进程）
+  *
+- * LSPosed 兼容：prefs 使用 MODE_WORLD_READABLE（LSPosed 拦截并放行），失败回退 MODE_PRIVATE。
++ * LSPosed 兼容：prefs 使用 MODE_PRIVATE（LSPosed 拦截并放行），失败回退 MODE_PRIVATE。
+  */
+ object ConfigManager {
+ 
+-    const val PREFS_NAME = "game_unlocker_prefs"
++    const val PREFS_NAME = "gameunlockerpro_prefs"
+     private const val KEY_ALL = "all_game_configs"
+     private const val KEY_GLOBAL = "global_config"
+ 
+@@ -28,7 +28,7 @@ object ConfigManager {
+     fun init(ctx: Context) {
+         if (prefs != null) return
+         prefs = try {
+-            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE)
++            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         } catch (_: Throwable) {
+             ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         }
+diff --git a/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/utils/HookConfigReader.kt b/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/utils/HookConfigReader.kt
+index 499d44f..5b0a6c2 100755
+--- a/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/utils/HookConfigReader.kt
++++ b/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/utils/HookConfigReader.kt
+@@ -21,7 +21,7 @@ object HookConfigReader {
+     fun readGlobal(): GameConfig? {
+         return try {
+             val xsp = de.robv.android.xposed.XSharedPreferences(MODULE_PKG, ConfigManager.PREFS_NAME)
+-            xsp.makeWorldReadable()
++            xsp
+             val json = xsp.getString("global_config", null) ?: return null
+             gson.fromJson(json, GameConfig::class.java)
+         } catch (_: Throwable) { null }
+diff --git a/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/utils/LogStore.kt b/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/utils/LogStore.kt
+index cae6254..94a5895 100644
+--- a/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/utils/LogStore.kt
++++ b/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/utils/LogStore.kt
+@@ -29,7 +29,7 @@ object LogStore {
+     fun init(ctx: Context) {
+         if (prefs != null) return
+         prefs = try {
+-            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE)
++            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         } catch (_: Throwable) {
+             try { ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) } catch (_: Throwable) { null }
+         }
+diff --git a/modules/MicroXEnhancer/app/build.gradle.kts b/modules/MicroXEnhancer/app/build.gradle.kts
+index f35c7b3..d013460 100755
+--- a/modules/MicroXEnhancer/app/build.gradle.kts
++++ b/modules/MicroXEnhancer/app/build.gradle.kts
+@@ -11,8 +11,8 @@ android {
+         applicationId = "com.microx.enhancer"
+         minSdk = 26
+         targetSdk = 34
+-        versionCode = 1
+-        versionName = "1.0.11"
++        versionCode = 13
++        versionName = "1.0.13"
+     }
+ 
+     signingConfigs {
 diff --git a/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/XposedLoader.kt b/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/XposedLoader.kt
-index 167ff3e..8691457 100755
+index 167ff3e..bd1c70c 100755
 --- a/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/XposedLoader.kt
 +++ b/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/XposedLoader.kt
 @@ -2,7 +2,6 @@ package com.microx.enhancer
@@ -394,6 +716,15 @@ index 167ff3e..8691457 100755
  import com.microx.enhancer.utils.HookHelper
  import de.robv.android.xposed.IXposedHookLoadPackage
  import de.robv.android.xposed.IXposedHookZygoteInit
+@@ -11,7 +10,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
+ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+ 
+     companion object {
+-        const val VERSION = "1.0.11"
++        const val VERSION = "1.0.13"
+         const val TAG = "LSP-MicroX"
+         const val MODULE_PKG = "com.microx.enhancer"
+         var currentPkg: String? = null
 @@ -86,17 +85,17 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
          currentPkg = "com.tencent.mm"
  
@@ -454,8 +785,107 @@ index 167ff3e..8691457 100755
 +    }
 +
  }
+diff --git a/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/core/ConfigProvider.kt b/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/core/ConfigProvider.kt
+index 5b8207a..0fa3767 100644
+--- a/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/core/ConfigProvider.kt
++++ b/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/core/ConfigProvider.kt
+@@ -15,7 +15,7 @@ class ConfigProvider : ContentProvider() {
+     }
+ 
+     override fun query(uri: Uri, proj: Array<String>?, sel: String?, selArgs: Array<String>?, sort: String?): android.database.Cursor? {
+-        val sp = context?.getSharedPreferences("microx_enhancer_prefs", android.content.Context.MODE_PRIVATE)
++        val sp = context?.getSharedPreferences("microxenhancer_prefs", android.content.Context.MODE_PRIVATE)
+         val cursor = MatrixCursor(arrayOf("key", "value"))
+         sp?.all?.forEach { (k, v) ->
+             cursor.addRow(arrayOf(k, v.toString()))
+diff --git a/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/utils/ConfigManager.kt b/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/utils/ConfigManager.kt
+index 06e261c..2234e21 100755
+--- a/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/utils/ConfigManager.kt
++++ b/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/utils/ConfigManager.kt
+@@ -15,11 +15,11 @@ import com.microx.enhancer.models.MicroXConfig
+  * 保留 KEY_* 常量供旧 Hook 代码（基于 KEY_* + isEnabled）使用，
+  * 同时新增 MicroXConfig 高层 API 供 Compose UI 使用，二者通过 KEY_* 映射同步。
+  *
+- * LSPosed 兼容：prefs 使用 MODE_WORLD_READABLE（LSPosed 拦截并放行），失败回退 MODE_PRIVATE。
++ * LSPosed 兼容：prefs 使用 MODE_PRIVATE（LSPosed 拦截并放行），失败回退 MODE_PRIVATE。
+  */
+ object ConfigManager {
+ 
+-    const val PREFS_NAME = "microx_enhancer_prefs"
++    const val PREFS_NAME = "microxenhancer_prefs"
+ 
+     private const val KEY_GLOBAL = "global_config"
+ 
+@@ -86,7 +86,7 @@ object ConfigManager {
+     fun init(ctx: Context) {
+         if (prefs != null) return
+         prefs = try {
+-            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE)
++            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         } catch (_: Throwable) {
+             ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         }
+diff --git a/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/utils/HookConfigReader.kt b/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/utils/HookConfigReader.kt
+index 2b8cd4c..4594e28 100755
+--- a/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/utils/HookConfigReader.kt
++++ b/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/utils/HookConfigReader.kt
+@@ -24,7 +24,7 @@ object HookConfigReader {
+     fun readGlobalJson(): String? {
+         return try {
+             val xsp = de.robv.android.xposed.XSharedPreferences(MODULE_PKG, ConfigManager.PREFS_NAME)
+-            xsp.makeWorldReadable()
++            xsp
+             xsp.getString("global_config", null)
+         } catch (_: Throwable) { null }
+     }
+@@ -36,7 +36,7 @@ object HookConfigReader {
+     fun readBoolean(key: String, default: Boolean): Boolean? {
+         return try {
+             val xsp = de.robv.android.xposed.XSharedPreferences(MODULE_PKG, ConfigManager.PREFS_NAME)
+-            xsp.makeWorldReadable()
++            xsp
+             if (xsp.contains(key)) xsp.getBoolean(key, default) else null
+         } catch (_: Throwable) { null }
+     }
+@@ -45,7 +45,7 @@ object HookConfigReader {
+     fun readGlobal(): MicroXConfig? {
+         return try {
+             val xsp = de.robv.android.xposed.XSharedPreferences(MODULE_PKG, ConfigManager.PREFS_NAME)
+-            xsp.makeWorldReadable()
++            xsp
+             val json = xsp.getString("global_config", null) ?: return null
+             gson.fromJson(json, MicroXConfig::class.java)
+         } catch (_: Throwable) { null }
+diff --git a/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/utils/LogStore.kt b/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/utils/LogStore.kt
+index 36984c0..86ae425 100644
+--- a/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/utils/LogStore.kt
++++ b/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/utils/LogStore.kt
+@@ -29,7 +29,7 @@ object LogStore {
+     fun init(ctx: Context) {
+         if (prefs != null) return
+         prefs = try {
+-            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE)
++            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         } catch (_: Throwable) {
+             try { ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) } catch (_: Throwable) { null }
+         }
+diff --git a/modules/NotifyMaster_NoRoot/app/build.gradle.kts b/modules/NotifyMaster_NoRoot/app/build.gradle.kts
+index cedf50c..304e122 100755
+--- a/modules/NotifyMaster_NoRoot/app/build.gradle.kts
++++ b/modules/NotifyMaster_NoRoot/app/build.gradle.kts
+@@ -11,8 +11,8 @@ android {
+         applicationId = "com.notifymaster.noroot"
+         minSdk = 26
+         targetSdk = 34
+-        versionCode = 1
+-        versionName = "1.0.11"
++        versionCode = 13
++        versionName = "1.0.13"
+     }
+ 
+     signingConfigs {
 diff --git a/modules/NotifyMaster_NoRoot/app/src/main/java/com/notifymaster/noroot/XposedLoader.kt b/modules/NotifyMaster_NoRoot/app/src/main/java/com/notifymaster/noroot/XposedLoader.kt
-index 66e615b..ee65b6b 100755
+index 66e615b..c58575d 100755
 --- a/modules/NotifyMaster_NoRoot/app/src/main/java/com/notifymaster/noroot/XposedLoader.kt
 +++ b/modules/NotifyMaster_NoRoot/app/src/main/java/com/notifymaster/noroot/XposedLoader.kt
 @@ -2,7 +2,6 @@ package com.notifymaster.noroot
@@ -466,6 +896,15 @@ index 66e615b..ee65b6b 100755
  import com.notifymaster.noroot.models.NotifyConfig
  import com.notifymaster.noroot.utils.EnvDetector
  import com.notifymaster.noroot.utils.HookConfigReader
+@@ -13,7 +12,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
+ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+ 
+     companion object {
+-        const val VERSION = "1.0.11"
++        const val VERSION = "1.0.13"
+         const val TAG = "LSP-NotifyMaster"
+         const val MODULE_PKG = "com.notifymaster.noroot"
+         var currentPkg: String? = null
 @@ -81,28 +80,28 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
              cfg.packageName = pkg
  
@@ -530,8 +969,76 @@ index 66e615b..ee65b6b 100755
 +    }
 +
  }
+diff --git a/modules/NotifyMaster_NoRoot/app/src/main/java/com/notifymaster/noroot/utils/ConfigManager.kt b/modules/NotifyMaster_NoRoot/app/src/main/java/com/notifymaster/noroot/utils/ConfigManager.kt
+index 175e124..a940aa5 100755
+--- a/modules/NotifyMaster_NoRoot/app/src/main/java/com/notifymaster/noroot/utils/ConfigManager.kt
++++ b/modules/NotifyMaster_NoRoot/app/src/main/java/com/notifymaster/noroot/utils/ConfigManager.kt
+@@ -14,11 +14,11 @@ import com.notifymaster.noroot.models.NotifyConfig
+  *  2. Hook 侧（目标APP进程）：通过 XSharedPreferences 读取模块 prefs（LSPosed模式）
+  *     或通过 Context.getSharedPreferences 读取（LSPatch本地模式，同进程）
+  *
+- * LSPosed 兼容：prefs 使用 MODE_WORLD_READABLE（LSPosed 拦截并放行），失败回退 MODE_PRIVATE。
++ * LSPosed 兼容：prefs 使用 MODE_PRIVATE（LSPosed 拦截并放行），失败回退 MODE_PRIVATE。
+  */
+ object ConfigManager {
+ 
+-    const val PREFS_NAME = "notify_master_prefs"
++    const val PREFS_NAME = "notifymaster_prefs"
+     private const val KEY_ALL = "all_app_configs"
+     private const val KEY_GLOBAL = "global_config"
+ 
+@@ -28,7 +28,7 @@ object ConfigManager {
+     fun init(ctx: Context) {
+         if (prefs != null) return
+         prefs = try {
+-            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE)
++            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         } catch (_: Throwable) {
+             ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         }
+diff --git a/modules/NotifyMaster_NoRoot/app/src/main/java/com/notifymaster/noroot/utils/HookConfigReader.kt b/modules/NotifyMaster_NoRoot/app/src/main/java/com/notifymaster/noroot/utils/HookConfigReader.kt
+index 0a80489..0fc2342 100755
+--- a/modules/NotifyMaster_NoRoot/app/src/main/java/com/notifymaster/noroot/utils/HookConfigReader.kt
++++ b/modules/NotifyMaster_NoRoot/app/src/main/java/com/notifymaster/noroot/utils/HookConfigReader.kt
+@@ -21,7 +21,7 @@ object HookConfigReader {
+     fun readGlobal(): NotifyConfig? {
+         return try {
+             val xsp = de.robv.android.xposed.XSharedPreferences(MODULE_PKG, ConfigManager.PREFS_NAME)
+-            xsp.makeWorldReadable()
++            xsp
+             val json = xsp.getString("global_config", null) ?: return null
+             gson.fromJson(json, NotifyConfig::class.java)
+         } catch (_: Throwable) { null }
+diff --git a/modules/NotifyMaster_NoRoot/app/src/main/java/com/notifymaster/noroot/utils/LogStore.kt b/modules/NotifyMaster_NoRoot/app/src/main/java/com/notifymaster/noroot/utils/LogStore.kt
+index 97b20f9..53c56c6 100644
+--- a/modules/NotifyMaster_NoRoot/app/src/main/java/com/notifymaster/noroot/utils/LogStore.kt
++++ b/modules/NotifyMaster_NoRoot/app/src/main/java/com/notifymaster/noroot/utils/LogStore.kt
+@@ -29,7 +29,7 @@ object LogStore {
+     fun init(ctx: Context) {
+         if (prefs != null) return
+         prefs = try {
+-            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE)
++            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         } catch (_: Throwable) {
+             try { ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) } catch (_: Throwable) { null }
+         }
+diff --git a/modules/PrivacyGuard_NoRoot/app/build.gradle.kts b/modules/PrivacyGuard_NoRoot/app/build.gradle.kts
+index dce8a6f..4a8c3d0 100755
+--- a/modules/PrivacyGuard_NoRoot/app/build.gradle.kts
++++ b/modules/PrivacyGuard_NoRoot/app/build.gradle.kts
+@@ -11,8 +11,8 @@ android {
+         applicationId = "com.privacyguard.noroot"
+         minSdk = 26
+         targetSdk = 34
+-        versionCode = 1
+-        versionName = "1.0.11"
++        versionCode = 13
++        versionName = "1.0.13"
+     }
+ 
+     signingConfigs {
 diff --git a/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/XposedLoader.kt b/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/XposedLoader.kt
-index 5c4dfe7..e27e65a 100755
+index 5c4dfe7..e2ca6b9 100755
 --- a/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/XposedLoader.kt
 +++ b/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/XposedLoader.kt
 @@ -2,7 +2,6 @@ package com.privacyguard.noroot
@@ -542,6 +1049,15 @@ index 5c4dfe7..e27e65a 100755
  import com.privacyguard.noroot.models.PrivacyConfig
  import com.privacyguard.noroot.utils.EnvDetector
  import com.privacyguard.noroot.utils.HookConfigReader
+@@ -13,7 +12,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
+ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+ 
+     companion object {
+-        const val VERSION = "1.0.11"
++        const val VERSION = "1.0.13"
+         const val TAG = "LSP-PrivacyGuard"
+         const val MODULE_PKG = "com.privacyguard.noroot"
+         var currentPkg: String? = null
 @@ -80,40 +79,40 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
              val cfg = loadConfig()
  
@@ -622,8 +1138,76 @@ index 5c4dfe7..e27e65a 100755
 +    }
 +
  }
+diff --git a/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/utils/ConfigManager.kt b/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/utils/ConfigManager.kt
+index 5a600b3..e492608 100755
+--- a/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/utils/ConfigManager.kt
++++ b/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/utils/ConfigManager.kt
+@@ -14,11 +14,11 @@ import com.privacyguard.noroot.models.PrivacyConfig
+  *  2. Hook 侧（目标APP进程）：通过 XSharedPreferences 读取模块 prefs（LSPosed模式）
+  *     或通过 Context.getSharedPreferences 读取（LSPatch本地模式，同进程）
+  *
+- * LSPosed 兼容：prefs 使用 MODE_WORLD_READABLE（LSPosed 拦截并放行），失败回退 MODE_PRIVATE。
++ * LSPosed 兼容：prefs 使用 MODE_PRIVATE（LSPosed 拦截并放行），失败回退 MODE_PRIVATE。
+  */
+ object ConfigManager {
+ 
+-    const val PREFS_NAME = "privacy_guard_prefs"
++    const val PREFS_NAME = "privacyguard_prefs"
+     private const val KEY_ALL = "all_app_configs"
+     private const val KEY_GLOBAL = "global_config"
+ 
+@@ -28,7 +28,7 @@ object ConfigManager {
+     fun init(ctx: Context) {
+         if (prefs != null) return
+         prefs = try {
+-            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE)
++            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         } catch (_: Throwable) {
+             ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         }
+diff --git a/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/utils/HookConfigReader.kt b/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/utils/HookConfigReader.kt
+index c6f23b6..f2d3b38 100755
+--- a/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/utils/HookConfigReader.kt
++++ b/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/utils/HookConfigReader.kt
+@@ -21,7 +21,7 @@ object HookConfigReader {
+     fun readGlobal(): PrivacyConfig? {
+         return try {
+             val xsp = de.robv.android.xposed.XSharedPreferences(MODULE_PKG, ConfigManager.PREFS_NAME)
+-            xsp.makeWorldReadable()
++            xsp
+             val json = xsp.getString("global_config", null) ?: return null
+             gson.fromJson(json, PrivacyConfig::class.java)
+         } catch (_: Throwable) { null }
+diff --git a/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/utils/LogStore.kt b/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/utils/LogStore.kt
+index 2028f14..e35e523 100644
+--- a/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/utils/LogStore.kt
++++ b/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/utils/LogStore.kt
+@@ -29,7 +29,7 @@ object LogStore {
+     fun init(ctx: Context) {
+         if (prefs != null) return
+         prefs = try {
+-            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE)
++            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         } catch (_: Throwable) {
+             try { ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) } catch (_: Throwable) { null }
+         }
+diff --git a/modules/ShizukuSceneFix/app/build.gradle.kts b/modules/ShizukuSceneFix/app/build.gradle.kts
+index dcbe93b..b906d20 100644
+--- a/modules/ShizukuSceneFix/app/build.gradle.kts
++++ b/modules/ShizukuSceneFix/app/build.gradle.kts
+@@ -11,8 +11,8 @@ android {
+         applicationId = "com.mjh.shizukufix"
+         minSdk = 26
+         targetSdk = 34
+-        versionCode = 1
+-        versionName = "1.0.11"
++        versionCode = 13
++        versionName = "1.0.13"
+     }
+ 
+     signingConfigs {
 diff --git a/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/XposedLoader.kt b/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/XposedLoader.kt
-index 6076533..b00ef30 100644
+index 6076533..7771158 100644
 --- a/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/XposedLoader.kt
 +++ b/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/XposedLoader.kt
 @@ -2,13 +2,6 @@ package com.mjh.shizukufix
@@ -640,6 +1224,15 @@ index 6076533..b00ef30 100644
  import com.mjh.shizukufix.models.ShizukuFixConfig
  import com.mjh.shizukufix.utils.EnvDetector
  import com.mjh.shizukufix.utils.HookConfigReader
+@@ -19,7 +12,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
+ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+ 
+     companion object {
+-        const val VERSION = "1.0.11"
++        const val VERSION = "1.0.13"
+         const val TAG = "LSP-ShizukuFix"
+         const val MODULE_PKG = "com.mjh.shizukufix"
+         const val SCENE_PACKAGE = "com.omarea.vtools"
 @@ -86,18 +79,18 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
  
              if (pkg == SCENE_PACKAGE) {
@@ -693,8 +1286,89 @@ index 6076533..b00ef30 100644
 +    }
 +
  }
+diff --git a/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/core/ConfigProvider.kt b/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/core/ConfigProvider.kt
+index 5c72858..b612e06 100644
+--- a/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/core/ConfigProvider.kt
++++ b/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/core/ConfigProvider.kt
+@@ -15,7 +15,7 @@ class ConfigProvider : ContentProvider() {
+     }
+ 
+     override fun query(uri: Uri, proj: Array<String>?, sel: String?, selArgs: Array<String>?, sort: String?): android.database.Cursor? {
+-        val sp = context?.getSharedPreferences("shizuku_fix_prefs", android.content.Context.MODE_PRIVATE)
++        val sp = context?.getSharedPreferences("shizukuscenefix_prefs", android.content.Context.MODE_PRIVATE)
+         val cursor = MatrixCursor(arrayOf("key", "value"))
+         sp?.all?.forEach { (k, v) ->
+             cursor.addRow(arrayOf(k, v.toString()))
+diff --git a/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/utils/ConfigManager.kt b/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/utils/ConfigManager.kt
+index 241947c..011f6db 100644
+--- a/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/utils/ConfigManager.kt
++++ b/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/utils/ConfigManager.kt
+@@ -14,11 +14,11 @@ import com.mjh.shizukufix.models.ShizukuFixConfig
+  *  2. Hook 侧（目标APP进程）：通过 XSharedPreferences 读取模块 prefs（LSPosed模式）
+  *     或通过 Context.getSharedPreferences 读取（LSPatch本地模式，同进程）
+  *
+- * LSPosed 兼容：prefs 使用 MODE_WORLD_READABLE（LSPosed 拦截并放行），失败回退 MODE_PRIVATE。
++ * LSPosed 兼容：prefs 使用 MODE_PRIVATE（LSPosed 拦截并放行），失败回退 MODE_PRIVATE。
+  */
+ object ConfigManager {
+ 
+-    const val PREFS_NAME = "shizuku_scene_fix_prefs"
++    const val PREFS_NAME = "shizukuscenefix_prefs"
+     private const val KEY_ALL = "all_app_configs"
+     private const val KEY_GLOBAL = "global_config"
+     private const val KEY_BLOCKED_COUNT = "blocked_count"
+@@ -29,7 +29,7 @@ object ConfigManager {
+     fun init(ctx: Context) {
+         if (prefs != null) return
+         prefs = try {
+-            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE)
++            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         } catch (_: Throwable) {
+             ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         }
+diff --git a/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/utils/HookConfigReader.kt b/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/utils/HookConfigReader.kt
+index 0b23c38..64643cf 100644
+--- a/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/utils/HookConfigReader.kt
++++ b/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/utils/HookConfigReader.kt
+@@ -21,7 +21,7 @@ object HookConfigReader {
+     fun readGlobal(): ShizukuFixConfig? {
+         return try {
+             val xsp = de.robv.android.xposed.XSharedPreferences(MODULE_PKG, ConfigManager.PREFS_NAME)
+-            xsp.makeWorldReadable()
++            xsp
+             val json = xsp.getString("global_config", null) ?: return null
+             gson.fromJson(json, ShizukuFixConfig::class.java)
+         } catch (_: Throwable) { null }
+diff --git a/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/utils/LogStore.kt b/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/utils/LogStore.kt
+index f18fb2b..b81c058 100644
+--- a/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/utils/LogStore.kt
++++ b/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/utils/LogStore.kt
+@@ -29,7 +29,7 @@ object LogStore {
+     fun init(ctx: Context) {
+         if (prefs != null) return
+         prefs = try {
+-            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE)
++            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         } catch (_: Throwable) {
+             try { ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) } catch (_: Throwable) { null }
+         }
+diff --git a/modules/StepModifier_NoRoot/app/build.gradle.kts b/modules/StepModifier_NoRoot/app/build.gradle.kts
+index 18bcdfd..b242143 100755
+--- a/modules/StepModifier_NoRoot/app/build.gradle.kts
++++ b/modules/StepModifier_NoRoot/app/build.gradle.kts
+@@ -11,8 +11,8 @@ android {
+         applicationId = "com.stepmod.noroot"
+         minSdk = 26
+         targetSdk = 34
+-        versionCode = 1
+-        versionName = "1.0.11"
++        versionCode = 13
++        versionName = "1.0.13"
+     }
+ 
+     signingConfigs {
 diff --git a/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/XposedLoader.kt b/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/XposedLoader.kt
-index ce9c3b0..0fda20c 100755
+index ce9c3b0..44dddde 100755
 --- a/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/XposedLoader.kt
 +++ b/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/XposedLoader.kt
 @@ -2,7 +2,6 @@ package com.stepmod.noroot
@@ -705,6 +1379,15 @@ index ce9c3b0..0fda20c 100755
  import com.stepmod.noroot.models.StepConfig
  import com.stepmod.noroot.utils.EnvDetector
  import com.stepmod.noroot.utils.HookConfigReader
+@@ -13,7 +12,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
+ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+ 
+     companion object {
+-        const val VERSION = "1.0.11"
++        const val VERSION = "1.0.13"
+         const val TAG = "LSP-StepModifier"
+         const val MODULE_PKG = "com.stepmod.noroot"
+         var currentPkg: String? = null
 @@ -80,25 +79,25 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
              val cfg = loadConfig()
  
@@ -765,8 +1448,89 @@ index ce9c3b0..0fda20c 100755
 +    }
 +
  }
+diff --git a/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/core/ConfigProvider.kt b/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/core/ConfigProvider.kt
+index 97af5f0..930d119 100644
+--- a/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/core/ConfigProvider.kt
++++ b/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/core/ConfigProvider.kt
+@@ -15,7 +15,7 @@ class ConfigProvider : ContentProvider() {
+     }
+ 
+     override fun query(uri: Uri, proj: Array<String>?, sel: String?, selArgs: Array<String>?, sort: String?): android.database.Cursor? {
+-        val sp = context?.getSharedPreferences("stepmod_prefs", android.content.Context.MODE_PRIVATE)
++        val sp = context?.getSharedPreferences("stepmodifier_prefs", android.content.Context.MODE_PRIVATE)
+         val cursor = MatrixCursor(arrayOf("key", "value"))
+         sp?.all?.forEach { (k, v) ->
+             cursor.addRow(arrayOf(k, v.toString()))
+diff --git a/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/utils/ConfigManager.kt b/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/utils/ConfigManager.kt
+index ab7280a..1b7e61f 100755
+--- a/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/utils/ConfigManager.kt
++++ b/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/utils/ConfigManager.kt
+@@ -14,11 +14,11 @@ import com.stepmod.noroot.models.StepConfig
+  *  2. Hook 侧（目标APP进程）：通过 XSharedPreferences 读取模块 prefs（LSPosed模式）
+  *     或通过 Context.getSharedPreferences 读取（LSPatch本地模式，同进程）
+  *
+- * LSPosed 兼容：prefs 使用 MODE_WORLD_READABLE（LSPosed 拦截并放行），失败回退 MODE_PRIVATE。
++ * LSPosed 兼容：prefs 使用 MODE_PRIVATE（LSPosed 拦截并放行），失败回退 MODE_PRIVATE。
+  */
+ object ConfigManager {
+ 
+-    const val PREFS_NAME = "step_modifier_prefs"
++    const val PREFS_NAME = "stepmodifier_prefs"
+     private const val KEY_ALL = "all_app_configs"
+     private const val KEY_GLOBAL = "global_config"
+ 
+@@ -28,7 +28,7 @@ object ConfigManager {
+     fun init(ctx: Context) {
+         if (prefs != null) return
+         prefs = try {
+-            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE)
++            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         } catch (_: Throwable) {
+             ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         }
+diff --git a/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/utils/HookConfigReader.kt b/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/utils/HookConfigReader.kt
+index b3b1d3e..b658747 100755
+--- a/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/utils/HookConfigReader.kt
++++ b/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/utils/HookConfigReader.kt
+@@ -21,7 +21,7 @@ object HookConfigReader {
+     fun readGlobal(): StepConfig? {
+         return try {
+             val xsp = de.robv.android.xposed.XSharedPreferences(MODULE_PKG, ConfigManager.PREFS_NAME)
+-            xsp.makeWorldReadable()
++            xsp
+             val json = xsp.getString("global_config", null) ?: return null
+             gson.fromJson(json, StepConfig::class.java)
+         } catch (_: Throwable) { null }
+diff --git a/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/utils/LogStore.kt b/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/utils/LogStore.kt
+index 7a2f402..66b0c59 100644
+--- a/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/utils/LogStore.kt
++++ b/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/utils/LogStore.kt
+@@ -29,7 +29,7 @@ object LogStore {
+     fun init(ctx: Context) {
+         if (prefs != null) return
+         prefs = try {
+-            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE)
++            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         } catch (_: Throwable) {
+             try { ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) } catch (_: Throwable) { null }
+         }
+diff --git a/modules/VideoSaver_NoRoot/app/build.gradle.kts b/modules/VideoSaver_NoRoot/app/build.gradle.kts
+index b77dd06..17b28d9 100755
+--- a/modules/VideoSaver_NoRoot/app/build.gradle.kts
++++ b/modules/VideoSaver_NoRoot/app/build.gradle.kts
+@@ -11,8 +11,8 @@ android {
+         applicationId = "com.videosaver.noroot"
+         minSdk = 26
+         targetSdk = 34
+-        versionCode = 1
+-        versionName = "1.0.11"
++        versionCode = 13
++        versionName = "1.0.13"
+     }
+ 
+     signingConfigs {
 diff --git a/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/XposedLoader.kt b/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/XposedLoader.kt
-index ad5c9a4..421bf8a 100755
+index ad5c9a4..19a3338 100755
 --- a/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/XposedLoader.kt
 +++ b/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/XposedLoader.kt
 @@ -2,7 +2,6 @@ package com.videosaver.noroot
@@ -777,6 +1541,15 @@ index ad5c9a4..421bf8a 100755
  import com.videosaver.noroot.models.VideoConfig
  import com.videosaver.noroot.utils.EnvDetector
  import com.videosaver.noroot.utils.HookConfigReader
+@@ -13,7 +12,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
+ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+ 
+     companion object {
+-        const val VERSION = "1.0.11"
++        const val VERSION = "1.0.13"
+         const val TAG = "LSP-VideoSaver"
+         const val MODULE_PKG = "com.videosaver.noroot"
+         var currentPkg: String? = null
 @@ -80,31 +79,31 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
              val cfg = loadConfig()
  
@@ -845,8 +1618,78 @@ index ad5c9a4..421bf8a 100755
 +    }
 +
  }
+diff --git a/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/utils/ConfigManager.kt b/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/utils/ConfigManager.kt
+index f1428b2..ed44137 100755
+--- a/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/utils/ConfigManager.kt
++++ b/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/utils/ConfigManager.kt
+@@ -14,13 +14,13 @@ import com.videosaver.noroot.models.VideoConfig
+  *  2. Hook 侧（目标APP进程）：通过 XSharedPreferences 读取模块 prefs（LSPosed 模式）
+  *     或通过 Context.getSharedPreferences 读取（LSPatch 本地模式，同进程）
+  *
+- * LSPosed 兼容：prefs 使用 MODE_WORLD_READABLE（LSPosed 拦截并放行），失败回退 MODE_PRIVATE。
++ * LSPosed 兼容：prefs 使用 MODE_PRIVATE（LSPosed 拦截并放行），失败回退 MODE_PRIVATE。
+  *
+  * LSPatch 合规：独立 prefs 文件名 video_saver_prefs，避免与宿主冲突。
+  */
+ object ConfigManager {
+ 
+-    const val PREFS_NAME = "video_saver_prefs"
++    const val PREFS_NAME = "videosaver_prefs"
+     private const val KEY_ALL = "all_app_configs"
+     private const val KEY_GLOBAL = "global_config"
+ 
+@@ -30,7 +30,7 @@ object ConfigManager {
+     fun init(ctx: Context) {
+         if (prefs != null) return
+         prefs = try {
+-            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE)
++            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         } catch (_: Throwable) {
+             ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         }
+diff --git a/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/utils/HookConfigReader.kt b/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/utils/HookConfigReader.kt
+index 4a3256a..abd38aa 100755
+--- a/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/utils/HookConfigReader.kt
++++ b/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/utils/HookConfigReader.kt
+@@ -21,7 +21,7 @@ object HookConfigReader {
+     fun readGlobal(): VideoConfig? {
+         return try {
+             val xsp = de.robv.android.xposed.XSharedPreferences(MODULE_PKG, ConfigManager.PREFS_NAME)
+-            xsp.makeWorldReadable()
++            xsp
+             val json = xsp.getString("global_config", null) ?: return null
+             gson.fromJson(json, VideoConfig::class.java)
+         } catch (_: Throwable) { null }
+diff --git a/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/utils/LogStore.kt b/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/utils/LogStore.kt
+index 990d6dd..7a76769 100644
+--- a/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/utils/LogStore.kt
++++ b/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/utils/LogStore.kt
+@@ -29,7 +29,7 @@ object LogStore {
+     fun init(ctx: Context) {
+         if (prefs != null) return
+         prefs = try {
+-            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE)
++            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         } catch (_: Throwable) {
+             try { ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) } catch (_: Throwable) { null }
+         }
+diff --git a/modules/VipUnlocker_NoRoot/app/build.gradle.kts b/modules/VipUnlocker_NoRoot/app/build.gradle.kts
+index e5cb3ab..313ddc0 100755
+--- a/modules/VipUnlocker_NoRoot/app/build.gradle.kts
++++ b/modules/VipUnlocker_NoRoot/app/build.gradle.kts
+@@ -11,8 +11,8 @@ android {
+         applicationId = "com.vipunlock.noroot"
+         minSdk = 26
+         targetSdk = 34
+-        versionCode = 1
+-        versionName = "1.0.11"
++        versionCode = 13
++        versionName = "1.0.13"
+     }
+ 
+     signingConfigs {
 diff --git a/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/XposedLoader.kt b/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/XposedLoader.kt
-index cff5fcf..c81b856 100755
+index cff5fcf..60d8427 100755
 --- a/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/XposedLoader.kt
 +++ b/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/XposedLoader.kt
 @@ -2,7 +2,6 @@ package com.vipunlock.noroot
@@ -857,6 +1700,15 @@ index cff5fcf..c81b856 100755
  import com.vipunlock.noroot.models.VipConfig
  import com.vipunlock.noroot.utils.EnvDetector
  import com.vipunlock.noroot.utils.HookConfigReader
+@@ -13,7 +12,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
+ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
+ 
+     companion object {
+-        const val VERSION = "1.0.11"
++        const val VERSION = "1.0.13"
+         const val TAG = "LSP-VipUnlocker"
+         const val MODULE_PKG = "com.vipunlock.noroot"
+         var currentPkg: String? = null
 @@ -81,10 +80,10 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
              cfg.packageName = pkg
  
@@ -932,3 +1784,69 @@ index cff5fcf..c81b856 100755
 +    }
 +
  }
+diff --git a/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/core/ConfigProvider.kt b/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/core/ConfigProvider.kt
+index 0c05665..c1ac1b1 100644
+--- a/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/core/ConfigProvider.kt
++++ b/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/core/ConfigProvider.kt
+@@ -15,7 +15,7 @@ class ConfigProvider : ContentProvider() {
+     }
+ 
+     override fun query(uri: Uri, proj: Array<String>?, sel: String?, selArgs: Array<String>?, sort: String?): android.database.Cursor? {
+-        val sp = context?.getSharedPreferences("vipunlock_prefs", android.content.Context.MODE_PRIVATE)
++        val sp = context?.getSharedPreferences("vipunlocker_prefs", android.content.Context.MODE_PRIVATE)
+         val cursor = MatrixCursor(arrayOf("key", "value"))
+         sp?.all?.forEach { (k, v) ->
+             cursor.addRow(arrayOf(k, v.toString()))
+diff --git a/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/utils/ConfigManager.kt b/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/utils/ConfigManager.kt
+index f3b96f5..38469ef 100755
+--- a/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/utils/ConfigManager.kt
++++ b/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/utils/ConfigManager.kt
+@@ -14,11 +14,11 @@ import com.vipunlock.noroot.models.VipConfig
+  *  2. Hook 侧（目标APP进程）：通过 XSharedPreferences 读取模块 prefs（LSPosed模式）
+  *     或通过 Context.getSharedPreferences 读取（LSPatch本地模式，同进程）
+  *
+- * LSPosed 兼容：prefs 使用 MODE_WORLD_READABLE（LSPosed 拦截并放行），失败回退 MODE_PRIVATE。
++ * LSPosed 兼容：prefs 使用 MODE_PRIVATE（LSPosed 拦截并放行），失败回退 MODE_PRIVATE。
+  */
+ object ConfigManager {
+ 
+-    const val PREFS_NAME = "vip_unlocker_prefs"
++    const val PREFS_NAME = "vipunlocker_prefs"
+     private const val KEY_ALL = "all_app_configs"
+     private const val KEY_GLOBAL = "global_config"
+ 
+@@ -28,7 +28,7 @@ object ConfigManager {
+     fun init(ctx: Context) {
+         if (prefs != null) return
+         prefs = try {
+-            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE)
++            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         } catch (_: Throwable) {
+             ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         }
+diff --git a/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/utils/HookConfigReader.kt b/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/utils/HookConfigReader.kt
+index ba09a36..77f7e0d 100755
+--- a/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/utils/HookConfigReader.kt
++++ b/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/utils/HookConfigReader.kt
+@@ -21,7 +21,7 @@ object HookConfigReader {
+     fun readGlobal(): VipConfig? {
+         return try {
+             val xsp = de.robv.android.xposed.XSharedPreferences(MODULE_PKG, ConfigManager.PREFS_NAME)
+-            xsp.makeWorldReadable()
++            xsp
+             val json = xsp.getString("global_config", null) ?: return null
+             gson.fromJson(json, VipConfig::class.java)
+         } catch (_: Throwable) { null }
+diff --git a/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/utils/LogStore.kt b/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/utils/LogStore.kt
+index 912ffb6..7436682 100644
+--- a/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/utils/LogStore.kt
++++ b/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/utils/LogStore.kt
+@@ -29,7 +29,7 @@ object LogStore {
+     fun init(ctx: Context) {
+         if (prefs != null) return
+         prefs = try {
+-            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_WORLD_READABLE)
++            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+         } catch (_: Throwable) {
+             try { ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) } catch (_: Throwable) { null }
+         }

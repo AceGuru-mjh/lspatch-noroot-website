@@ -1,0 +1,59 @@
+{
+  "version": "1.0.13",
+  "summary": {
+    "loaders_fixed": 11,
+    "hooks_reflected": 101,
+    "prefs_unified": 11,
+    "mode_wr_removed": 33,
+    "build_gradle_updated": 11,
+    "build_yml_updated": true,
+    "files_changed": 62,
+    "patch_lines": 1852
+  },
+  "modules": {
+    "AdBlockerX_NoRoot": {
+      "hooks": 11,
+      "mode": "apply"
+    },
+    "AudioBoost_NoRoot": {
+      "hooks": 7,
+      "mode": "apply"
+    },
+    "BatteryOptimizer_NoRoot": {
+      "hooks": 11,
+      "mode": "apply"
+    },
+    "GameUnlockerPro_NoRoot": {
+      "hooks": 10,
+      "mode": "apply"
+    },
+    "MicroXEnhancer": {
+      "hooks": 12,
+      "mode": "hook"
+    },
+    "NotifyMaster_NoRoot": {
+      "hooks": 8,
+      "mode": "apply"
+    },
+    "PrivacyGuard_NoRoot": {
+      "hooks": 12,
+      "mode": "apply"
+    },
+    "ShizukuSceneFix": {
+      "hooks": 7,
+      "mode": "apply"
+    },
+    "StepModifier_NoRoot": {
+      "hooks": 7,
+      "mode": "apply"
+    },
+    "VideoSaver_NoRoot": {
+      "hooks": 9,
+      "mode": "apply"
+    },
+    "VipUnlocker_NoRoot": {
+      "hooks": 7,
+      "mode": "apply"
+    }
+  }
+}

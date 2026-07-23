@@ -13,10 +13,24 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "LSPatch NoRoot 模块合集",
+  "applicationCategory": "UtilityApplication",
+  "operatingSystem": "Android 8+",
+  "description": "11 个免 Root Xposed 模块 · LSPatch 免 Root 注入 · Material 3 毛玻璃悬浮球",
+  "version": "1.0.14",
+  "author": {
+    "@type": "Person",
+    "name": "MJH"
+  }
+};
+
 export const metadata: Metadata = {
-  title: "LSPatch NoRoot · 免 Root Xposed 模块合集官网",
-  description: "11 个免 Root Xposed 模块 · Material 3 毛玻璃悬浮球 · 三大铁律全量修复 · 广告拦截/隐私保护/游戏加速/微信增强",
-  keywords: ["LSPatch", "LSPosed", "Xposed", "免Root", "悬浮球", "毛玻璃", "Material 3", "广告拦截", "隐私保护", "游戏加速"],
+  title: "LSPatch NoRoot · 免 Root Xposed 模块合集官网 | v1.0.14",
+  description: "11 个免 Root Xposed 模块 · 116 个 Hook · 广告拦截/隐私保护/游戏加速/微信增强 · LSPatch 模块官网 · 三大铁律防秒崩 · Material 3 设计",
+  keywords: ["LSPatch", "Xposed", "免Root", "Android模块", "广告拦截", "隐私保护", "AdBlockerX", "MJH"],
   authors: [{ name: "MJH", url: "https://github.com/AceGuru-mjh" }],
   openGraph: {
     title: "LSPatch NoRoot · 免 Root Xposed 模块合集",
@@ -39,12 +53,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="zh-CN" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-neutral-950 text-white`}
       >
         {children}
         <Toaster />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
       </body>
     </html>
   );

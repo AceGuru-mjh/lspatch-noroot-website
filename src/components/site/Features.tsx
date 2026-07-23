@@ -23,7 +23,7 @@ const FEATURES = [
     title: "三大铁律防秒崩",
     desc: "LSPatch 集成模式下，违反铁律会导致类加载阶段秒崩。本合集 11 模块全部遵守三大铁律，反射加载零 import。",
     color: "#F0AAD6",
-    points: ["铁律1: 零 import hooks/*", "铁律2: Class.forName 反射", "铁律3: 进程双分支", "101 处 Hook 反射化"],
+    points: ["铁律1: 零 import hooks/*", "铁律2: Class.forName 反射", "铁律3: 进程双分支", "116 处 Hook 反射化"],
   },
   {
     icon: Lock,

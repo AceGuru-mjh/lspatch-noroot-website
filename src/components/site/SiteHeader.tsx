@@ -9,7 +9,7 @@ const NAV_ITEMS = [
   { href: "#modules", label: "模块" },
   { href: "#rules", label: "铁律" },
   { href: "#preview", label: "Demo" },
-  { href: "#v1013", label: "v1.0.13" },
+  { href: "#v1013", label: "v1.0.14" },
   { href: "#download", label: "下载" },
   { href: "#faq", label: "FAQ" },
 ];
@@ -17,11 +17,26 @@ const NAV_ITEMS = [
 export function SiteHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("");
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setActiveSection(`#${entry.target.id}`);
+        });
+      },
+      { rootMargin: "-80px 0px -50% 0px", threshold: 0 }
+    );
+
+    document.querySelectorAll("section[id]").forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
   }, []);
 
   return (
@@ -43,7 +58,7 @@ export function SiteHeader() {
           </div>
           <div className="leading-tight">
             <div className="text-[14px] font-bold tracking-tight">LSPatch NoRoot</div>
-            <div className="text-[9.5px] text-white/45">11 模块 · v1.0.13</div>
+            <div className="text-[9.5px] text-white/45">11 模块 · v1.0.14</div>
           </div>
         </a>
 
@@ -53,7 +68,11 @@ export function SiteHeader() {
             <a
               key={item.href}
               href={item.href}
-              className="m3-state rounded-lg px-3 py-1.5 text-[12.5px] font-medium text-white/60 transition-colors hover:text-white"
+              className={`m3-state rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-colors ${
+                activeSection === item.href
+                  ? "text-emerald-400"
+                  : "text-white/60 hover:text-white"
+              }`}
             >
               {item.label}
             </a>

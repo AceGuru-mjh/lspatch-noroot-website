@@ -16,7 +16,7 @@ import {
 
 const STATS = [
   { label: "XposedLoader 修复", value: "11", sub: "/ 11 模块", color: "#6DBA95", icon: Shield },
-  { label: "Hook 反射化", value: "101", sub: "处 invokeHook", color: "#FFB870", icon: Zap },
+  { label: "Hook 反射化", value: "116", sub: "处 invokeHook", color: "#FFB870", icon: Zap },
   { label: "Hook 文件 Class.forName", value: "13", sub: "个文件铁律2", color: "#FFD87A", icon: FileCode2 },
   { label: "Config prefs 统一", value: "11", sub: "/ 11 模块", color: "#F0AAD6", icon: Database },
   { label: "MODE_WORLD_READABLE 删除", value: "33", sub: "处", color: "#FF6B6B", icon: Database },
@@ -41,7 +41,7 @@ const MODULE_RESULTS = [
 
 const FIX_ITEMS = [
   { title: "铁律 1 · 零 import hooks/*", detail: "删除 27 条 import 语句，改为 HOOK_CLASSES 数组 + invokeHook() 反射", done: true },
-  { title: "铁律 2 · Hook Class.forName 加载", detail: "101 处 invokeHook + 13 个 Hook 文件的 findAndHookMethod 改为传 Class 对象", done: true },
+  { title: "铁律 2 · Hook Class.forName 加载", detail: "116 处 invokeHook + 13 个 Hook 文件的 findAndHookMethod 改为传 Class 对象", done: true },
   { title: "铁律 3 · 进程双分支", detail: "handleLoadPackage 第一行 if (packageName == OWN_PKG) return，自身进程走 UI", done: true },
   { title: "IPC · prefs 名统一", detail: "11 模块 ConfigProvider/ConfigManager 的 PREFS_NAME 统一为 {module}_prefs", done: true },
   { title: "IPC · 删 MODE_WORLD_READABLE", detail: "33 处 MODE_WORLD_READABLE → MODE_PRIVATE，跨进程读走 ContentProvider", done: true },
@@ -62,6 +62,22 @@ const DOWNLOADS = [
 export function V1013Tab() {
   return (
     <div className="space-y-6">
+      {/* v1.0.14 新增功能提示 */}
+      <section className="text-center">
+        <div
+          className="mb-3 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium"
+          style={{ borderColor: "#7DD3FC", color: "#7DD3FC", background: "rgba(125,211,252,0.12)" }}
+        >
+          <Sparkles className="h-3 w-3" />
+          v1.0.14 新增 12 个 Hook · 总计 116 个
+        </div>
+        <p className="mx-auto mb-6 max-w-2xl text-pretty text-[12px] leading-relaxed text-white/55">
+          v1.0.14 在 v1.0.13 铁律修复基础上，为全部 11 个模块新增 12 个 Hook 功能，涵盖自学习广告检测、
+          应用分场景音量、GPU governor 控制、内核 IO 调度、贴纸收集、通知折叠分组、隐私审计、
+          深度系统扫描、定时步数策略、系统录屏、sqlite3 VIP 缓存等。
+        </p>
+      </section>
+
       {/* Hero */}
       <section className="text-center">
         <div

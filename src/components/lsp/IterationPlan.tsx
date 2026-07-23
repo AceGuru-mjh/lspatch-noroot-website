@@ -190,7 +190,7 @@ export function IterationPlan() {
         </h1>
         <p className="mx-auto mt-3 max-w-2xl text-pretty text-[12.5px] leading-relaxed text-white/55">
           v1.0.12 已成功生成 11 个 APK，但 <span className="text-rose-300">铁律修复未合并</span>——
-          APK 虽能安装，集成模式运行会秒崩。以下是完整诊断与 v1.0.13 → v1.2.0 迭代路线
+          APK 虽能安装，集成模式运行会秒崩。以下是完整诊断与 v1.0.14 → v1.2.0 迭代路线
         </p>
       </section>
 
@@ -211,7 +211,7 @@ export function IterationPlan() {
 
       {/* 迭代路线 */}
       <section>
-        <h2 className="mb-3 text-center text-[15px] font-bold text-white/85">迭代路线图 v1.0.13 → v1.2.0</h2>
+        <h2 className="mb-3 text-center text-[15px] font-bold text-white/85">迭代路线图 v1.0.14 → v1.2.0</h2>
         <div className="space-y-3">
           {ITERATIONS.map((it, i) => (
             <IterationCard key={it.version} iter={it} index={i} />

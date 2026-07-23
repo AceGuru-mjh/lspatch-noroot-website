@@ -25,7 +25,7 @@ export function Hero() {
             <span className="absolute h-1.5 w-1.5 animate-ping rounded-full bg-emerald-400 opacity-60" />
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
           </span>
-          <span className="text-white/70">v1.0.13 已发布</span>
+          <span className="text-white/70">v1.0.14 已发布</span>
           <span className="text-white/30">·</span>
           <span className="text-emerald-300">三大铁律全量修复</span>
         </motion.div>
@@ -66,7 +66,7 @@ export function Hero() {
             className="m3-state group flex items-center gap-2 rounded-full bg-emerald-500 px-6 py-3 text-[13px] font-semibold text-emerald-950 shadow-lg shadow-emerald-500/25 transition-all hover:shadow-emerald-500/40"
           >
             <Download className="h-4 w-4" />
-            下载 v1.0.13
+            下载 v1.0.14
             <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
           </a>
           <a
@@ -118,7 +118,7 @@ export function Hero() {
         >
           {[
             { value: "11", label: "免 Root 模块" },
-            { value: "101", label: "Hook 反射化" },
+            { value: "116", label: "Hook 反射化" },
             { value: "0", label: "残留问题" },
           ].map((s) => (
             <div key={s.label} className="glass-card rounded-2xl p-4">

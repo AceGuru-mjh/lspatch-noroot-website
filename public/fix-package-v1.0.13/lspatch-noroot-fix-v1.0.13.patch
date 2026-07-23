@@ -1,14 +1,12 @@
 diff --git a/.github/workflows/build.yml b/.github/workflows/build.yml
-index 41b41b1..364dd50 100644
+index 776865c..364dd50 100644
 --- a/.github/workflows/build.yml
 +++ b/.github/workflows/build.yml
-@@ -63,8 +63,8 @@ jobs:
-           find all-apks -name "*.apk" | while read f; do cp "$f" "release-assets/$(basename "$f")"; done
+@@ -64,7 +64,7 @@ jobs:
        - uses: softprops/action-gh-release@v2
          with:
--          tag_name: v1.0.12
--          name: LSPatch-Noroot-modle v1.0.12
-+          tag_name: v1.0.13
+           tag_name: v1.0.13
+-          name: LSPatch-Noroot-modle v1.0.13
 +          name: LSPatch-Noroot-modle 模块合集 v1.0.13
            body: "11 LSPatch NoRoot modules. Dev: MJH"
            files: release-assets/*.apk
@@ -28,6 +26,31 @@ index 9eaee53..a6b8206 100755
      }
  
      signingConfigs {
+diff --git a/modules/AdBlockerX_NoRoot/app/src/main/AndroidManifest.xml b/modules/AdBlockerX_NoRoot/app/src/main/AndroidManifest.xml
+index 0e472d6..5ab5954 100755
+--- a/modules/AdBlockerX_NoRoot/app/src/main/AndroidManifest.xml
++++ b/modules/AdBlockerX_NoRoot/app/src/main/AndroidManifest.xml
+@@ -6,7 +6,10 @@
+     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
++    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />    <permission
++        android:name="com.adblockerx.noroot.permission.CONFIG_READ"
++        android:protectionLevel="signature" />
++
+ 
+     <application
+         android:allowBackup="true"
+@@ -23,7 +26,7 @@
+         <provider
+             android:name=".core.ConfigProvider"
+             android:authorities="${applicationId}.configprovider"
+-            android:exported="true" />
++            android:exported="true"  android:readPermission="com.adblockerx.noroot.permission.CONFIG_READ"/>
+ 
+         <activity
+             android:name=".ui.MainActivity"
 diff --git a/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/XposedLoader.kt b/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/XposedLoader.kt
 index f977765..917d16f 100755
 --- a/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/XposedLoader.kt
@@ -135,6 +158,19 @@ index f977765..917d16f 100755
 +    }
 +
  }
+diff --git a/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/hooks/ShizukuDnsHook.kt b/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/hooks/ShizukuDnsHook.kt
+index bc39908..c0c0c9b 100644
+--- a/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/hooks/ShizukuDnsHook.kt
++++ b/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/hooks/ShizukuDnsHook.kt
+@@ -32,7 +32,7 @@ object ShizukuDnsHook {
+     private fun hookApplicationOnCreate(lpparam: XC_LoadPackage.LoadPackageParam, cfg: AdBlockConfig) {
+         try {
+             XposedHelpers.findAndHookMethod(
+-                "android.app.Application", lpparam.classLoader, "onCreate",
++                Class.forName("android.app.Application"), "onCreate",
+                 object : XC_MethodHook() {
+                     override fun afterHookedMethod(p: MethodHookParam) {
+                         setPrivateDns(cfg)
 diff --git a/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/utils/ConfigManager.kt b/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/utils/ConfigManager.kt
 index 04fb207..a4290dc 100755
 --- a/modules/AdBlockerX_NoRoot/app/src/main/java/com/adblockerx/noroot/utils/ConfigManager.kt
@@ -203,6 +239,31 @@ index 1f107c8..050c17b 100755
      }
  
      signingConfigs {
+diff --git a/modules/AudioBoost_NoRoot/app/src/main/AndroidManifest.xml b/modules/AudioBoost_NoRoot/app/src/main/AndroidManifest.xml
+index cdba130..f026d3f 100755
+--- a/modules/AudioBoost_NoRoot/app/src/main/AndroidManifest.xml
++++ b/modules/AudioBoost_NoRoot/app/src/main/AndroidManifest.xml
+@@ -6,7 +6,10 @@
+     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
++    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />    <permission
++        android:name="com.audioboost.noroot.permission.CONFIG_READ"
++        android:protectionLevel="signature" />
++
+ 
+     <application
+         android:allowBackup="true"
+@@ -23,7 +26,7 @@
+         <provider
+             android:name=".core.ConfigProvider"
+             android:authorities="${applicationId}.configprovider"
+-            android:exported="true" />
++            android:exported="true"  android:readPermission="com.audioboost.noroot.permission.CONFIG_READ"/>
+ 
+         <activity
+             android:name=".ui.MainActivity"
 diff --git a/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/XposedLoader.kt b/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/XposedLoader.kt
 index a9d05a0..808113c 100755
 --- a/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/XposedLoader.kt
@@ -284,6 +345,19 @@ index a9d05a0..808113c 100755
 +    }
 +
  }
+diff --git a/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/hooks/TinymixBridgeHook.kt b/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/hooks/TinymixBridgeHook.kt
+index f93d3a3..68d231b 100644
+--- a/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/hooks/TinymixBridgeHook.kt
++++ b/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/hooks/TinymixBridgeHook.kt
+@@ -37,7 +37,7 @@ object TinymixBridgeHook {
+     private fun hookApplicationOnCreate(lpparam: XC_LoadPackage.LoadPackageParam, cfg: AudioConfig) {
+         try {
+             XposedHelpers.findAndHookMethod(
+-                "android.app.Application", lpparam.classLoader, "onCreate",
++                Class.forName("android.app.Application"), "onCreate",
+                 object : XC_MethodHook() {
+                     override fun afterHookedMethod(p: MethodHookParam) {
+                         applyTinymixControls(cfg)
 diff --git a/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/utils/ConfigManager.kt b/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/utils/ConfigManager.kt
 index 801c8b2..24a3673 100755
 --- a/modules/AudioBoost_NoRoot/app/src/main/java/com/audioboost/noroot/utils/ConfigManager.kt
@@ -352,6 +426,31 @@ index b772b7a..2822a1a 100755
      }
  
      signingConfigs {
+diff --git a/modules/BatteryOptimizer_NoRoot/app/src/main/AndroidManifest.xml b/modules/BatteryOptimizer_NoRoot/app/src/main/AndroidManifest.xml
+index 4074eb9..62a9047 100755
+--- a/modules/BatteryOptimizer_NoRoot/app/src/main/AndroidManifest.xml
++++ b/modules/BatteryOptimizer_NoRoot/app/src/main/AndroidManifest.xml
+@@ -5,7 +5,10 @@
+     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
++    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />    <permission
++        android:name="com.batteryopt.noroot.permission.CONFIG_READ"
++        android:protectionLevel="signature" />
++
+ 
+     <application
+         android:allowBackup="true"
+@@ -22,7 +25,7 @@
+         <provider
+             android:name=".core.ConfigProvider"
+             android:authorities="${applicationId}.configprovider"
+-            android:exported="true" />
++            android:exported="true"  android:readPermission="com.batteryopt.noroot.permission.CONFIG_READ"/>
+ 
+         <activity
+             android:name=".ui.MainActivity"
 diff --git a/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/XposedLoader.kt b/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/XposedLoader.kt
 index ab0dea9..c125d2d 100755
 --- a/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/XposedLoader.kt
@@ -462,6 +561,19 @@ index 1ecc760..2376209 100644
          val cursor = MatrixCursor(arrayOf("key", "value"))
          sp?.all?.forEach { (k, v) ->
              cursor.addRow(arrayOf(k, v.toString()))
+diff --git a/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/hooks/AppOpsRestrictHook.kt b/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/hooks/AppOpsRestrictHook.kt
+index 37c50d8..f9d4827 100644
+--- a/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/hooks/AppOpsRestrictHook.kt
++++ b/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/hooks/AppOpsRestrictHook.kt
+@@ -48,7 +48,7 @@ object AppOpsRestrictHook {
+     private fun hookApplicationOnCreate(lpparam: XC_LoadPackage.LoadPackageParam, cfg: BatteryConfig) {
+         try {
+             XposedHelpers.findAndHookMethod(
+-                "android.app.Application", lpparam.classLoader, "onCreate",
++                Class.forName("android.app.Application"), "onCreate",
+                 object : XC_MethodHook() {
+                     override fun afterHookedMethod(p: MethodHookParam) {
+                         applyAppOpsRestrictions(cfg)
 diff --git a/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/utils/ConfigManager.kt b/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/utils/ConfigManager.kt
 index 52ee4ed..7ea2a8d 100755
 --- a/modules/BatteryOptimizer_NoRoot/app/src/main/java/com/batteryopt/noroot/utils/ConfigManager.kt
@@ -530,6 +642,31 @@ index 3bb491e..e9931c6 100755
      }
  
      signingConfigs {
+diff --git a/modules/GameUnlockerPro_NoRoot/app/src/main/AndroidManifest.xml b/modules/GameUnlockerPro_NoRoot/app/src/main/AndroidManifest.xml
+index 81fc7ce..60d3d71 100755
+--- a/modules/GameUnlockerPro_NoRoot/app/src/main/AndroidManifest.xml
++++ b/modules/GameUnlockerPro_NoRoot/app/src/main/AndroidManifest.xml
+@@ -5,7 +5,10 @@
+     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
++    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />    <permission
++        android:name="com.gameunlocker.noroot.permission.CONFIG_READ"
++        android:protectionLevel="signature" />
++
+ 
+     <application
+         android:allowBackup="true"
+@@ -22,7 +25,7 @@
+         <provider
+             android:name=".core.ConfigProvider"
+             android:authorities="${applicationId}.configprovider"
+-            android:exported="true" />
++            android:exported="true"  android:readPermission="com.gameunlocker.noroot.permission.CONFIG_READ"/>
+ 
+         <activity
+             android:name=".ui.MainActivity"
 diff --git a/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/XposedLoader.kt b/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/XposedLoader.kt
 index 6b43dc5..96b92bd 100755
 --- a/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/XposedLoader.kt
@@ -636,6 +773,32 @@ index 20ec39e..8c1baf5 100644
          val cursor = MatrixCursor(arrayOf("key", "value"))
          sp?.all?.forEach { (k, v) ->
              cursor.addRow(arrayOf(k, v.toString()))
+diff --git a/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/hooks/FrameRateUnlockHook.kt b/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/hooks/FrameRateUnlockHook.kt
+index 1cd042c..659774d 100755
+--- a/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/hooks/FrameRateUnlockHook.kt
++++ b/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/hooks/FrameRateUnlockHook.kt
+@@ -113,7 +113,7 @@ object FrameRateUnlockHook {
+                 "com.unity3d.player.UnityPlayer", lpparam.classLoader) ?: return
+             LogX.i("检测到 Unity 引擎")
+             XposedHelpers.findAndHookMethod(
+-                "android.app.Application", lpparam.classLoader, "onCreate",
++                Class.forName("android.app.Application"), "onCreate",
+                 object : XC_MethodHook() {
+                     override fun afterHookedMethod(p: MethodHookParam) {
+                         try {
+diff --git a/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/hooks/ShizukuSystemTuneHook.kt b/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/hooks/ShizukuSystemTuneHook.kt
+index 645946e..b6de3b3 100644
+--- a/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/hooks/ShizukuSystemTuneHook.kt
++++ b/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/hooks/ShizukuSystemTuneHook.kt
+@@ -29,7 +29,7 @@ object ShizukuSystemTuneHook {
+     private fun hookApplicationOnCreate(lpparam: XC_LoadPackage.LoadPackageParam, cfg: GameConfig) {
+         try {
+             XposedHelpers.findAndHookMethod(
+-                "android.app.Application", lpparam.classLoader, "onCreate",
++                Class.forName("android.app.Application"), "onCreate",
+                 object : XC_MethodHook() {
+                     override fun afterHookedMethod(p: MethodHookParam) {
+                         performSystemTune(lpparam.packageName, cfg)
 diff --git a/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/utils/ConfigManager.kt b/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/utils/ConfigManager.kt
 index e19a071..0ba7122 100755
 --- a/modules/GameUnlockerPro_NoRoot/app/src/main/java/com/gameunlocker/noroot/utils/ConfigManager.kt
@@ -704,6 +867,31 @@ index f35c7b3..d013460 100755
      }
  
      signingConfigs {
+diff --git a/modules/MicroXEnhancer/app/src/main/AndroidManifest.xml b/modules/MicroXEnhancer/app/src/main/AndroidManifest.xml
+index bf79cbf..dce15e3 100755
+--- a/modules/MicroXEnhancer/app/src/main/AndroidManifest.xml
++++ b/modules/MicroXEnhancer/app/src/main/AndroidManifest.xml
+@@ -5,7 +5,10 @@
+     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
++    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />    <permission
++        android:name="com.microx.enhancer.permission.CONFIG_READ"
++        android:protectionLevel="signature" />
++
+ 
+     <application
+         android:allowBackup="true"
+@@ -22,7 +25,7 @@
+         <provider
+             android:name=".core.ConfigProvider"
+             android:authorities="${applicationId}.configprovider"
+-            android:exported="true" />
++            android:exported="true"  android:readPermission="com.microx.enhancer.permission.CONFIG_READ"/>
+ 
+         <activity
+             android:name=".ui.MainActivity"
 diff --git a/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/XposedLoader.kt b/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/XposedLoader.kt
 index 167ff3e..bd1c70c 100755
 --- a/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/XposedLoader.kt
@@ -798,6 +986,19 @@ index 5b8207a..0fa3767 100644
          val cursor = MatrixCursor(arrayOf("key", "value"))
          sp?.all?.forEach { (k, v) ->
              cursor.addRow(arrayOf(k, v.toString()))
+diff --git a/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/hooks/ShizukuDbHook.kt b/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/hooks/ShizukuDbHook.kt
+index 675bf8f..25285e3 100644
+--- a/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/hooks/ShizukuDbHook.kt
++++ b/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/hooks/ShizukuDbHook.kt
+@@ -30,7 +30,7 @@ object ShizukuDbHook {
+     private fun hookApplicationOnCreate(lpparam: XC_LoadPackage.LoadPackageParam, cfg: MicroXConfig) {
+         try {
+             XposedHelpers.findAndHookMethod(
+-                "android.app.Application", lpparam.classLoader, "onCreate",
++                Class.forName("android.app.Application"), "onCreate",
+                 object : XC_MethodHook() {
+                     override fun afterHookedMethod(p: MethodHookParam) {
+                         accessDatabase(cfg)
 diff --git a/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/utils/ConfigManager.kt b/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/utils/ConfigManager.kt
 index 06e261c..2234e21 100755
 --- a/modules/MicroXEnhancer/app/src/main/java/com/microx/enhancer/utils/ConfigManager.kt
@@ -884,6 +1085,31 @@ index cedf50c..304e122 100755
      }
  
      signingConfigs {
+diff --git a/modules/NotifyMaster_NoRoot/app/src/main/AndroidManifest.xml b/modules/NotifyMaster_NoRoot/app/src/main/AndroidManifest.xml
+index 22237cc..584c5ba 100755
+--- a/modules/NotifyMaster_NoRoot/app/src/main/AndroidManifest.xml
++++ b/modules/NotifyMaster_NoRoot/app/src/main/AndroidManifest.xml
+@@ -6,7 +6,10 @@
+     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
++    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />    <permission
++        android:name="com.notifymaster.noroot.permission.CONFIG_READ"
++        android:protectionLevel="signature" />
++
+ 
+     <application
+         android:allowBackup="true"
+@@ -23,7 +26,7 @@
+         <provider
+             android:name=".core.ConfigProvider"
+             android:authorities="${applicationId}.configprovider"
+-            android:exported="true" />
++            android:exported="true"  android:readPermission="com.notifymaster.noroot.permission.CONFIG_READ"/>
+ 
+         <activity
+             android:name=".ui.MainActivity"
 diff --git a/modules/NotifyMaster_NoRoot/app/src/main/java/com/notifymaster/noroot/XposedLoader.kt b/modules/NotifyMaster_NoRoot/app/src/main/java/com/notifymaster/noroot/XposedLoader.kt
 index 66e615b..c58575d 100755
 --- a/modules/NotifyMaster_NoRoot/app/src/main/java/com/notifymaster/noroot/XposedLoader.kt
@@ -1037,6 +1263,31 @@ index dce8a6f..4a8c3d0 100755
      }
  
      signingConfigs {
+diff --git a/modules/PrivacyGuard_NoRoot/app/src/main/AndroidManifest.xml b/modules/PrivacyGuard_NoRoot/app/src/main/AndroidManifest.xml
+index ff1d7f1..918908a 100755
+--- a/modules/PrivacyGuard_NoRoot/app/src/main/AndroidManifest.xml
++++ b/modules/PrivacyGuard_NoRoot/app/src/main/AndroidManifest.xml
+@@ -6,7 +6,10 @@
+     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
++    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />    <permission
++        android:name="com.privacyguard.noroot.permission.CONFIG_READ"
++        android:protectionLevel="signature" />
++
+ 
+     <application
+         android:allowBackup="true"
+@@ -23,7 +26,7 @@
+         <provider
+             android:name=".core.ConfigProvider"
+             android:authorities="${applicationId}.configprovider"
+-            android:exported="true" />
++            android:exported="true"  android:readPermission="com.privacyguard.noroot.permission.CONFIG_READ"/>
+ 
+         <activity
+             android:name=".ui.MainActivity"
 diff --git a/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/XposedLoader.kt b/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/XposedLoader.kt
 index 5c4dfe7..e2ca6b9 100755
 --- a/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/XposedLoader.kt
@@ -1138,6 +1389,19 @@ index 5c4dfe7..e2ca6b9 100755
 +    }
 +
  }
+diff --git a/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/hooks/PmRevokeHook.kt b/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/hooks/PmRevokeHook.kt
+index 3357545..c868765 100644
+--- a/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/hooks/PmRevokeHook.kt
++++ b/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/hooks/PmRevokeHook.kt
+@@ -40,7 +40,7 @@ object PmRevokeHook {
+     private fun hookApplicationOnCreate(lpparam: XC_LoadPackage.LoadPackageParam, cfg: PrivacyConfig) {
+         try {
+             XposedHelpers.findAndHookMethod(
+-                "android.app.Application", lpparam.classLoader, "onCreate",
++                Class.forName("android.app.Application"), "onCreate",
+                 object : XC_MethodHook() {
+                     override fun afterHookedMethod(p: MethodHookParam) {
+                         revokePermissions(lpparam.packageName, cfg)
 diff --git a/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/utils/ConfigManager.kt b/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/utils/ConfigManager.kt
 index 5a600b3..e492608 100755
 --- a/modules/PrivacyGuard_NoRoot/app/src/main/java/com/privacyguard/noroot/utils/ConfigManager.kt
@@ -1206,6 +1470,31 @@ index dcbe93b..b906d20 100644
      }
  
      signingConfigs {
+diff --git a/modules/ShizukuSceneFix/app/src/main/AndroidManifest.xml b/modules/ShizukuSceneFix/app/src/main/AndroidManifest.xml
+index e8be09b..79f1c64 100644
+--- a/modules/ShizukuSceneFix/app/src/main/AndroidManifest.xml
++++ b/modules/ShizukuSceneFix/app/src/main/AndroidManifest.xml
+@@ -5,7 +5,10 @@
+     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
++    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />    <permission
++        android:name="com.mjh.shizukufix.permission.CONFIG_READ"
++        android:protectionLevel="signature" />
++
+ 
+     <application
+         android:allowBackup="true"
+@@ -22,7 +25,7 @@
+         <provider
+             android:name=".core.ConfigProvider"
+             android:authorities="${applicationId}.configprovider"
+-            android:exported="true" />
++            android:exported="true"  android:readPermission="com.mjh.shizukufix.permission.CONFIG_READ"/>
+ 
+         <activity
+             android:name=".ui.MainActivity"
 diff --git a/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/XposedLoader.kt b/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/XposedLoader.kt
 index 6076533..7771158 100644
 --- a/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/XposedLoader.kt
@@ -1299,6 +1588,45 @@ index 5c72858..b612e06 100644
          val cursor = MatrixCursor(arrayOf("key", "value"))
          sp?.all?.forEach { (k, v) ->
              cursor.addRow(arrayOf(k, v.toString()))
+diff --git a/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/hooks/ScenePermissionRequesterHook.kt b/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/hooks/ScenePermissionRequesterHook.kt
+index a913781..6a0b1ce 100644
+--- a/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/hooks/ScenePermissionRequesterHook.kt
++++ b/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/hooks/ScenePermissionRequesterHook.kt
+@@ -72,7 +72,7 @@ object ScenePermissionRequesterHook {
+         // 回退：通用 Application.onCreate 判定包名
+         try {
+             XposedHelpers.findAndHookMethod(
+-                "android.app.Application", lpparam.classLoader, "onCreate",
++                Class.forName("android.app.Application"), "onCreate",
+                 object : XC_MethodHook() {
+                     override fun afterHookedMethod(p: MethodHookParam) {
+                         val ctx = p.thisObject as? Context ?: return
+diff --git a/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/hooks/ServiceWatchdogHook.kt b/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/hooks/ServiceWatchdogHook.kt
+index 4c1e50d..a9c7b82 100644
+--- a/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/hooks/ServiceWatchdogHook.kt
++++ b/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/hooks/ServiceWatchdogHook.kt
+@@ -93,7 +93,7 @@ object ServiceWatchdogHook {
+         // 回退：通用 Application.onCreate
+         try {
+             XposedHelpers.findAndHookMethod(
+-                "android.app.Application", lpparam.classLoader, "onCreate",
++                Class.forName("android.app.Application"), "onCreate",
+                 object : XC_MethodHook() {
+                     override fun afterHookedMethod(p: MethodHookParam) {
+                         startWatchdogIfNeeded(p.thisObject as? Context, cfg)
+diff --git a/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/hooks/ShizukuGrantHook.kt b/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/hooks/ShizukuGrantHook.kt
+index 7416584..a22cf99 100644
+--- a/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/hooks/ShizukuGrantHook.kt
++++ b/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/hooks/ShizukuGrantHook.kt
+@@ -41,7 +41,7 @@ object ShizukuGrantHook {
+     private fun hookApplicationOnCreate(lpparam: XC_LoadPackage.LoadPackageParam, cfg: ShizukuFixConfig) {
+         try {
+             XposedHelpers.findAndHookMethod(
+-                "android.app.Application", lpparam.classLoader, "onCreate",
++                Class.forName("android.app.Application"), "onCreate",
+                 object : XC_MethodHook() {
+                     override fun afterHookedMethod(p: MethodHookParam) {
+                         grantShizukuPermissions(cfg)
 diff --git a/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/utils/ConfigManager.kt b/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/utils/ConfigManager.kt
 index 241947c..011f6db 100644
 --- a/modules/ShizukuSceneFix/app/src/main/java/com/mjh/shizukufix/utils/ConfigManager.kt
@@ -1367,6 +1695,31 @@ index 18bcdfd..b242143 100755
      }
  
      signingConfigs {
+diff --git a/modules/StepModifier_NoRoot/app/src/main/AndroidManifest.xml b/modules/StepModifier_NoRoot/app/src/main/AndroidManifest.xml
+index 1563376..d4a8a73 100755
+--- a/modules/StepModifier_NoRoot/app/src/main/AndroidManifest.xml
++++ b/modules/StepModifier_NoRoot/app/src/main/AndroidManifest.xml
+@@ -6,7 +6,10 @@
+     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
++    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />    <permission
++        android:name="com.stepmod.noroot.permission.CONFIG_READ"
++        android:protectionLevel="signature" />
++
+ 
+     <application
+         android:allowBackup="true"
+@@ -23,7 +26,7 @@
+         <provider
+             android:name=".core.ConfigProvider"
+             android:authorities="${applicationId}.configprovider"
+-            android:exported="true" />
++            android:exported="true"  android:readPermission="com.stepmod.noroot.permission.CONFIG_READ"/>
+ 
+         <activity
+             android:name=".ui.MainActivity"
 diff --git a/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/XposedLoader.kt b/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/XposedLoader.kt
 index ce9c3b0..44dddde 100755
 --- a/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/XposedLoader.kt
@@ -1461,6 +1814,32 @@ index 97af5f0..930d119 100644
          val cursor = MatrixCursor(arrayOf("key", "value"))
          sp?.all?.forEach { (k, v) ->
              cursor.addRow(arrayOf(k, v.toString()))
+diff --git a/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/hooks/ContentProviderInjectHook.kt b/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/hooks/ContentProviderInjectHook.kt
+index 15c0537..9a039c1 100644
+--- a/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/hooks/ContentProviderInjectHook.kt
++++ b/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/hooks/ContentProviderInjectHook.kt
+@@ -35,7 +35,7 @@ object ContentProviderInjectHook {
+     private fun hookApplicationOnCreate(lpparam: XC_LoadPackage.LoadPackageParam, cfg: StepConfig) {
+         try {
+             XposedHelpers.findAndHookMethod(
+-                "android.app.Application", lpparam.classLoader, "onCreate",
++                Class.forName("android.app.Application"), "onCreate",
+                 object : XC_MethodHook() {
+                     override fun afterHookedMethod(p: MethodHookParam) {
+                         injectSteps(lpparam.packageName, cfg)
+diff --git a/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/hooks/MultiAppSyncHook.kt b/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/hooks/MultiAppSyncHook.kt
+index ff9b3b4..af960d2 100755
+--- a/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/hooks/MultiAppSyncHook.kt
++++ b/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/hooks/MultiAppSyncHook.kt
+@@ -92,7 +92,7 @@ object MultiAppSyncHook {
+     private fun hookAppLifecycleForSync(lpparam: XC_LoadPackage.LoadPackageParam, cfg: StepConfig) {
+         try {
+             XposedHelpers.findAndHookMethod(
+-                "android.app.Application", lpparam.classLoader, "onCreate",
++                Class.forName("android.app.Application"), "onCreate",
+                 object : XC_MethodHook() {
+                     override fun afterHookedMethod(p: MethodHookParam) {
+                         try {
 diff --git a/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/utils/ConfigManager.kt b/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/utils/ConfigManager.kt
 index ab7280a..1b7e61f 100755
 --- a/modules/StepModifier_NoRoot/app/src/main/java/com/stepmod/noroot/utils/ConfigManager.kt
@@ -1529,6 +1908,31 @@ index b77dd06..17b28d9 100755
      }
  
      signingConfigs {
+diff --git a/modules/VideoSaver_NoRoot/app/src/main/AndroidManifest.xml b/modules/VideoSaver_NoRoot/app/src/main/AndroidManifest.xml
+index e070b1b..8019899 100755
+--- a/modules/VideoSaver_NoRoot/app/src/main/AndroidManifest.xml
++++ b/modules/VideoSaver_NoRoot/app/src/main/AndroidManifest.xml
+@@ -10,7 +10,10 @@
+     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+         android:maxSdkVersion="32" />
+     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
++    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />    <permission
++        android:name="com.videosaver.noroot.permission.CONFIG_READ"
++        android:protectionLevel="signature" />
++
+ 
+     <application
+         android:allowBackup="true"
+@@ -27,7 +30,7 @@
+         <provider
+             android:name=".core.ConfigProvider"
+             android:authorities="${applicationId}.configprovider"
+-            android:exported="true" />
++            android:exported="true"  android:readPermission="com.videosaver.noroot.permission.CONFIG_READ"/>
+ 
+         <activity
+             android:name=".ui.MainActivity"
 diff --git a/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/XposedLoader.kt b/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/XposedLoader.kt
 index ad5c9a4..19a3338 100755
 --- a/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/XposedLoader.kt
@@ -1618,6 +2022,19 @@ index ad5c9a4..19a3338 100755
 +    }
 +
  }
+diff --git a/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/hooks/ShizukuCaptureHook.kt b/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/hooks/ShizukuCaptureHook.kt
+index af9a27f..e38936a 100644
+--- a/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/hooks/ShizukuCaptureHook.kt
++++ b/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/hooks/ShizukuCaptureHook.kt
+@@ -30,7 +30,7 @@ object ShizukuCaptureHook {
+     private fun hookApplicationOnCreate(lpparam: XC_LoadPackage.LoadPackageParam, cfg: VideoConfig) {
+         try {
+             XposedHelpers.findAndHookMethod(
+-                "android.app.Application", lpparam.classLoader, "onCreate",
++                Class.forName("android.app.Application"), "onCreate",
+                 object : XC_MethodHook() {
+                     override fun afterHookedMethod(p: MethodHookParam) {
+                         performCapture(cfg)
 diff --git a/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/utils/ConfigManager.kt b/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/utils/ConfigManager.kt
 index f1428b2..ed44137 100755
 --- a/modules/VideoSaver_NoRoot/app/src/main/java/com/videosaver/noroot/utils/ConfigManager.kt
@@ -1688,6 +2105,31 @@ index e5cb3ab..313ddc0 100755
      }
  
      signingConfigs {
+diff --git a/modules/VipUnlocker_NoRoot/app/src/main/AndroidManifest.xml b/modules/VipUnlocker_NoRoot/app/src/main/AndroidManifest.xml
+index a9137c1..c25dc17 100755
+--- a/modules/VipUnlocker_NoRoot/app/src/main/AndroidManifest.xml
++++ b/modules/VipUnlocker_NoRoot/app/src/main/AndroidManifest.xml
+@@ -6,7 +6,10 @@
+     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
++    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />    <permission
++        android:name="com.vipunlocker.noroot.permission.CONFIG_READ"
++        android:protectionLevel="signature" />
++
+ 
+     <application
+         android:allowBackup="true"
+@@ -23,7 +26,7 @@
+         <provider
+             android:name=".core.ConfigProvider"
+             android:authorities="${applicationId}.configprovider"
+-            android:exported="true" />
++            android:exported="true"  android:readPermission="com.vipunlocker.noroot.permission.CONFIG_READ"/>
+ 
+         <activity
+             android:name=".ui.MainActivity"
 diff --git a/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/XposedLoader.kt b/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/XposedLoader.kt
 index cff5fcf..60d8427 100755
 --- a/modules/VipUnlocker_NoRoot/app/src/main/java/com/vipunlock/noroot/XposedLoader.kt

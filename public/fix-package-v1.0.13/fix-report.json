@@ -1,5 +1,6 @@
 {
   "version": "1.0.13",
+  "phase": "complete (phase1 + phase2)",
   "summary": {
     "loaders_fixed": 11,
     "hooks_reflected": 101,
@@ -7,52 +8,75 @@
     "mode_wr_removed": 33,
     "build_gradle_updated": 11,
     "build_yml_updated": true,
-    "files_changed": 62,
-    "patch_lines": 1852
+    "hooks_ironrule2_fixed": 13,
+    "configprovider_permission_added": 11,
+    "files_changed": 86,
+    "patch_lines": 2294
+  },
+  "iron_rules": {
+    "rule1_zero_import": "11/11 通过（27 条 import hooks/* 删除）",
+    "rule2_class_forname": "11/11 通过（101 处 invokeHook + 13 个 Hook 文件 Class.forName）",
+    "rule3_dual_branch": "11/11 通过（已有，保留）"
+  },
+  "ipc": {
+    "prefs_unified": "11/11 模块 ConfigProvider/ConfigManager prefs 名统一",
+    "mode_world_readable_removed": "33 处 → MODE_PRIVATE",
+    "configprovider_permission": "11/11 添加 signature 级 readPermission"
   },
   "modules": {
     "AdBlockerX_NoRoot": {
       "hooks": 11,
+      "ironrule2_files": 1,
       "mode": "apply"
     },
     "AudioBoost_NoRoot": {
       "hooks": 7,
+      "ironrule2_files": 1,
       "mode": "apply"
     },
     "BatteryOptimizer_NoRoot": {
       "hooks": 11,
+      "ironrule2_files": 1,
       "mode": "apply"
     },
     "GameUnlockerPro_NoRoot": {
       "hooks": 10,
+      "ironrule2_files": 2,
       "mode": "apply"
     },
     "MicroXEnhancer": {
       "hooks": 12,
+      "ironrule2_files": 1,
       "mode": "hook"
     },
     "NotifyMaster_NoRoot": {
       "hooks": 8,
+      "ironrule2_files": 0,
       "mode": "apply"
     },
     "PrivacyGuard_NoRoot": {
       "hooks": 12,
+      "ironrule2_files": 1,
       "mode": "apply"
     },
     "ShizukuSceneFix": {
       "hooks": 7,
+      "ironrule2_files": 3,
       "mode": "apply"
     },
     "StepModifier_NoRoot": {
       "hooks": 7,
+      "ironrule2_files": 2,
       "mode": "apply"
     },
     "VideoSaver_NoRoot": {
       "hooks": 9,
+      "ironrule2_files": 1,
       "mode": "apply"
     },
     "VipUnlocker_NoRoot": {
       "hooks": 7,
+      "ironrule2_files": 0,
       "mode": "apply"
     }
   }

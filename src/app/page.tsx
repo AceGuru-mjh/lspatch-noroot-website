@@ -1,6 +1,6 @@
 "use client";
 
-import { Github, Download, Rocket } from "lucide-react";
+import { Github, Download, Rocket, RefreshCw } from "lucide-react";
 import { getModule, paletteToCssVars } from "@/lib/lsp-modules";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { Hero } from "@/components/site/Hero";
@@ -14,6 +14,7 @@ import { IronRules } from "@/components/lsp/IronRules";
 import { V1013Tab } from "@/components/lsp/V1013Tab";
 import { DownloadTab } from "@/components/lsp/DownloadTab";
 import { IterationPlan } from "@/components/lsp/IterationPlan";
+import { RepoFixTab } from "@/components/lsp/RepoFixTab";
 
 export default function Home() {
   const previewMod = getModule("adblocker");
@@ -68,6 +69,17 @@ export default function Home() {
           subtitle="三大铁律 + IPC + 版本号 + permission 一次修完，86 文件 2294 行 patch，0 残留问题"
         >
           <V1013Tab />
+        </SectionWrapper>
+
+        {/* 仓库乱码修复 */}
+        <SectionWrapper
+          id="repofix"
+          badge="仓库修复"
+          badgeColor="#6DBA95"
+          title="4 仓库乱码全面修复"
+          subtitle="GBK/UTF-16/混合编码全修复 + 4 个 README 重写 + healthcheck.py 编码修复 · 已推送 GitHub"
+        >
+          <RepoFixTab />
         </SectionWrapper>
 
         {/* 下载中心 */}

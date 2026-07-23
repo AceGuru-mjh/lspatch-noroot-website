@@ -1,104 +1,114 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, Lock, Gamepad2, BatteryCharging, MessageCircle, Crown, Video, Footprints, Volume2, Bell, Plug, Check, X } from "lucide-react";
+import { Shield, Check, ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { LSP_MODULES } from "@/lib/lsp-modules";
 
-interface ShowcaseModule {
-  id: string;
-  name: string;
-  nameEn: string;
-  pkg: string;
-  icon: typeof Shield;
-  desc: string;
-  targets: string[];
-  features: string[];
-  metric: string;
-  color: string;
-}
+const MODULE_FEATURES: Record<string, string[]> = {
+  adblocker: [
+    "WebView 广告拦截", "OkHttp 请求过滤", "Hosts 黑名单", "追踪器阻断", "弹窗关闭",
+    "Cookie 清理", "Intent 拦截", "重定向阻断", "DNS 劫持", "截图解锁", "摇一摇拦截",
+    "自学习检测", "DOE 加密 DNS",
+  ],
+  privacy: [
+    "Android ID 伪造", "IMEI 屏蔽", "地理位置伪造", "传感器禁用", "运营商伪造",
+    "通讯录屏蔽", "设备型号伪装", "Advertising ID 清空", "剪贴板保护", "时区语言伪造",
+    "安装状态伪装", "包可见性伪造",
+    "隐私审计", "音视频防护", "后台活动监控", "网络泄露检测", "反指纹",
+  ],
+  game: [
+    "帧率上限解锁 120Hz", "机型伪装 ROG", "进程优先级提升", "网络延迟优化",
+    "触控采样率 240Hz", "内存调度优化", "画质选项解锁", "温控降频绕过", "分辨率伪装", "反检测隐藏",
+    "内核 IO 调度", "GPU 频率锁定", "RAM 预热加速", "输入延迟优化",
+  ],
+  battery: [
+    "WakeLock 优化", "Alarm 心跳对齐", "后台同步合并", "AppOps 限制", "JobScheduler 优化",
+    "定位降频", "动画优化", "传感器优化", "蓝牙扫描节流", "后台相机阻断", "震动节流",
+    "GPU governor 控制", "AppOps 后台限制", "I/O 调度优化",
+  ],
+  microx: [
+    "防撤回消息", "朋友圈广告去除", "在线状态隐藏", "聊天界面美化", "表情包上限解锁",
+    "朋友圈更新静默", "安全绕过", "隐私保护", "批量管理", "自动回复", "语音导出",
+    "消息搜索增强", "自定义主题",
+    "贴纸收集", "批量消息", "朋友圈清理", "深度缓存",
+  ],
+  vip: [
+    "去广告 VIP", "会员主题解锁", "付费章节解锁", "Pro 模式", "高清画质", "云空间解锁",
+    "专属字体", "去水印",
+    "sqlite3 VIP 缓存", "Play Store DB",
+  ],
+  video: [
+    "抖音去水印", "快手去水印", "小红书下载", "B 站下载", "直播流解析", "音频提取",
+    "批量下载", "Shizuku 抓包",
+    "系统录屏", "系统代理", "媒体扫描",
+  ],
+  step: [
+    "步数添加", "运动轨迹模拟", "步数同步", "心率数据生成", "爬楼模拟", "睡眠数据生成",
+    "ContentProvider 注入", "传感器阻断", "多 APP 同步", "历史伪造",
+    "定时步数策略", "卡路里计算", "竞赛模式", "反检测混淆", "GPX 路线",
+  ],
+  audio: [
+    "音量增强 +6dB", "Tinymix 桥接", "低音增强", "均衡器", "扬声器增强", "麦克风增强", "音质增强",
+    "应用分场景音量", "耳机自动切换", "定时静音", "蓝牙设备 EQ",
+  ],
+  notify: [
+    "通知过滤", "防撤回通知", "通知历史", "通知美化", "批量通知", "优先级覆盖",
+    "静默通知", "Shizuku 命令",
+    "通知折叠分组", "VIP 白名单", "定时免打扰",
+  ],
+  shizuku: [
+    "授权请求修复", "Shizuku 授权", "Scene 隐藏", "看门狗服务", "变体检测", "列表注入", "自动授权助手",
+    "深度系统扫描", "自动权限修复", "后台服务注入",
+  ],
+};
 
-const MODULES: ShowcaseModule[] = [
-  {
-    id: "adblocker", name: "广告拦截", nameEn: "AdBlockerX_NoRoot", pkg: "com.adblockerx.noroot",
-    icon: Shield, desc: "拦截 WebView / OkHttp 黑名单广告、开屏弹窗、追踪器",
-    targets: ["浏览器", "资讯 APP", "电商 APP"],
-    features: ["WebView 广告拦截", "OkHttp 请求过滤", "Hosts 黑名单", "追踪器阻断", "弹窗关闭", "Cookie 清理", "Intent 拦截", "重定向阻断", "DNS 劫持", "截图解锁", "摇一摇拦截"],
-    metric: "1,206 条已拦截", color: "#6DBA95",
-  },
-  {
-    id: "privacy", name: "隐私保护", nameEn: "PrivacyGuard_NoRoot", pkg: "com.privacyguard.noroot",
-    icon: Lock, desc: "伪造设备 ID / IMEI / 地理位置 / 传感器，阻断追踪",
-    targets: ["全部 APP"],
-    features: ["Android ID 伪造", "IMEI 屏蔽", "地理位置伪造", "传感器禁用", "运营商伪造", "通讯录屏蔽", "设备型号伪装", "Advertising ID 清空", "剪贴板保护", "时区语言伪造", "安装状态伪装", "包可见性伪造"],
-    metric: "5 次已保护", color: "#4DD9DD",
-  },
-  {
-    id: "game", name: "游戏加速", nameEn: "GameUnlockerPro_NoRoot", pkg: "com.gameunlocker.noroot",
-    icon: Gamepad2, desc: "解锁帧率 / 伪装机型 / 提升触控采样率 / 降低延迟",
-    targets: ["游戏 APP"],
-    features: ["帧率上限解锁 120Hz", "机型伪装 ROG", "进程优先级提升", "网络延迟优化", "触控采样率 240Hz", "内存调度优化", "画质选项解锁", "温控降频绕过", "分辨率伪装", "反检测隐藏"],
-    metric: "120Hz 已解锁", color: "#FFB870",
-  },
-  {
-    id: "battery", name: "省电优化", nameEn: "BatteryOptimizer_NoRoot", pkg: "com.batteryopt.noroot",
-    icon: BatteryCharging, desc: "优化 WakeLock / Alarm / JobScheduler，冻结后台",
-    targets: ["系统 / 后台 APP"],
-    features: ["WakeLock 优化", "Alarm 心跳对齐", "后台同步合并", "AppOps 限制", "JobScheduler 优化", "定位降频", "动画优化", "传感器优化", "蓝牙扫描节流", "后台相机阻断", "震动节流"],
-    metric: "-5% 省电", color: "#C6D660",
-  },
-  {
-    id: "microx", name: "微信增强", nameEn: "MicroXEnhancer", pkg: "com.microx.enhancer",
-    icon: MessageCircle, desc: "防撤回 / 去朋友圈广告 / 美化 / 隐藏在线状态",
-    targets: ["微信", "QQ"],
-    features: ["防撤回消息", "朋友圈广告去除", "在线状态隐藏", "聊天界面美化", "表情包上限解锁", "朋友圈更新静默", "安全绕过", "隐私保护", "批量管理", "自动回复", "语音导出", "消息搜索增强", "自定义主题"],
-    metric: "3 条防撤回", color: "#F0AAD6",
-  },
-  {
-    id: "vip", name: "VIP 解锁", nameEn: "VipUnlocker_NoRoot", pkg: "com.vipunlocker.noroot",
-    icon: Crown, desc: "解锁去广告 / 会员主题 / 付费章节 / Pro 模式",
-    targets: ["视频 / 工具 / 阅读 APP"],
-    features: ["去广告 VIP", "会员主题解锁", "付费章节解锁", "Pro 模式", "高清画质", "云空间解锁", "专属字体", "去水印"],
-    metric: "3 项已解锁", color: "#FFD87A",
-  },
-  {
-    id: "video", name: "视频下载", nameEn: "VideoSaver_NoRoot", pkg: "com.videosaver.noroot",
-    icon: Video, desc: "解析抖音 / 快手 / 小红书视频链接，去水印下载",
-    targets: ["短视频 APP"],
-    features: ["抖音去水印", "快手去水印", "小红书下载", "B 站下载", "直播流解析", "音频提取", "批量下载", "Shizuku 抓包"],
-    metric: "3 个已下载", color: "#F08AD6",
-  },
-  {
-    id: "step", name: "步数修改", nameEn: "StepModifier_NoRoot", pkg: "com.stepmod.noroot",
-    icon: Footprints, desc: "添加步数 / 模拟轨迹 / 生成心率与睡眠数据",
-    targets: ["运动健康 APP"],
-    features: ["步数添加", "运动轨迹模拟", "步数同步", "心率数据生成", "爬楼模拟", "睡眠数据生成", "ContentProvider 注入", "传感器阻断", "多 APP 同步", "历史伪造"],
-    metric: "3,880 步", color: "#45D6D2",
-  },
-  {
-    id: "audio", name: "音量增强", nameEn: "AudioBoost_NoRoot", pkg: "com.audioboost.noroot",
-    icon: Volume2, desc: "突破音量上限 / 均衡器 / 降噪 / Hi-Fi 通道",
-    targets: ["音乐 / 视频 APP"],
-    features: ["音量增强 +6dB", "Tinymix 桥接", "低音增强", "均衡器", "扬声器增强", "麦克风增强", "音质增强"],
-    metric: "+6dB 增益", color: "#FF8A80",
-  },
-  {
-    id: "notify", name: "通知管理", nameEn: "NotifyMaster_NoRoot", pkg: "com.notifymaster.noroot",
-    icon: Bell, desc: "静音 / 合并 / 拦截营销 / 延迟 / 分类通知",
-    targets: ["系统通知"],
-    features: ["通知过滤", "防撤回通知", "通知历史", "通知美化", "批量通知", "优先级覆盖", "静默通知", "Shizuku 命令"],
-    metric: "3 条已静音", color: "#E0B68A",
-  },
-  {
-    id: "shizuku", name: "Shizuku 修复", nameEn: "ShizukuSceneFix", pkg: "com.mjh.shizukufix",
-    icon: Plug, desc: "修复 Scene 工具箱在 Shizuku 授权列表不显示",
-    targets: ["Shizuku / Scene"],
-    features: ["授权请求修复", "Shizuku 授权", "Scene 隐藏", "看门狗服务", "变体检测", "列表注入", "自动授权助手"],
-    metric: "1 已修复", color: "#7DCFA0",
-  },
-];
+const METRICS: Record<string, string> = {
+  adblocker: "1,206 条已拦截",
+  privacy: "5 次已保护",
+  game: "120Hz 已解锁",
+  battery: "-5% 省电",
+  microx: "3 条防撤回",
+  vip: "3 项已解锁",
+  video: "3 个已下载",
+  step: "3,880 步",
+  audio: "+6dB 增益",
+  notify: "3 条已静音",
+  shizuku: "1 已修复",
+};
+
+const COLORS: Record<string, string> = {
+  adblocker: "#6DBA95",
+  privacy: "#4DD9DD",
+  game: "#FFB870",
+  battery: "#C6D660",
+  microx: "#F0AAD6",
+  vip: "#FFD87A",
+  video: "#F08AD6",
+  step: "#45D6D2",
+  audio: "#FF8A80",
+  notify: "#E0B68A",
+  shizuku: "#7DCFA0",
+};
 
 export function ModuleShowcase() {
-  const [active, setActive] = useState<ShowcaseModule>(MODULES[0]);
+  const modules = useMemo(() =>
+    LSP_MODULES.map((m) => ({
+      id: m.id,
+      name: m.name,
+      nameEn: m.nameEn,
+      pkg: m.pkg,
+      icon: m.icon,
+      desc: m.desc,
+      targets: m.targets,
+      features: MODULE_FEATURES[m.id] ?? [],
+      metric: METRICS[m.id] ?? "",
+      color: COLORS[m.id] ?? "",
+    })),
+  []);
+
+  const [active, setActive] = useState(modules[0]);
 
   return (
     <section id="modules" className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
@@ -119,7 +129,7 @@ export function ModuleShowcase() {
         {/* 左：模块网格 */}
         <div className="lg:col-span-7">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {MODULES.map((m, i) => {
+            {modules.map((m, i) => {
               const Icon = m.icon;
               const isActive = m.id === active.id;
               return (
@@ -214,6 +224,13 @@ export function ModuleShowcase() {
                   ))}
                 </div>
               </div>
+
+              <Link
+                href={`/module/${active.id}`}
+                className="m3-state mb-4 inline-flex items-center gap-1 rounded-lg border border-white/8 px-3 py-1.5 text-[11px] text-white/50 transition-colors hover:text-white"
+              >
+                详情 <ArrowRight className="h-3 w-3" />
+              </Link>
 
               {/* 目标 APP */}
               <div>

@@ -16,7 +16,7 @@ import {
 import { useState } from "react";
 
 const FIX_FILES = [
-  { name: "lspatch-noroot-fix-v1.0.12.patch", desc: "git patch · 12 文件 · 934 行", size: "63 KB", path: "/fix-package/lspatch-noroot-fix-v1.0.12.patch", icon: GitBranch, primary: true },
+  { name: "lspatch-noroot-fix-v1.0.14.patch", desc: "git patch · 12 文件 · 934 行", size: "63 KB", path: "/fix-package/lspatch-noroot-fix-v1.0.14.patch", icon: GitBranch, primary: true },
   { name: "apply.sh", desc: "一键应用脚本 · 自动验证铁律", size: "2.6 KB", path: "/fix-package/apply.sh", icon: Terminal },
   { name: "fix_xposed_loaders.py", desc: "铁律修复脚本 · 自动化 11 模块", size: "3.8 KB", path: "/fix-package/fix_xposed_loaders.py", icon: FileCode2 },
   { name: "README.md", desc: "修复包说明文档", size: "1.2 KB", path: "/fix-package/README.md", icon: Package },
@@ -25,7 +25,7 @@ const FIX_FILES = [
 const FIX_STATS = [
   { label: "修改文件", value: "12", sub: "11 XposedLoader + build.yml" },
   { label: "删除 import", value: "26", sub: "条 hooks/* 导入" },
-  { label: "反射替换", value: "89", sub: "处 Hook 调用" },
+  { label: "反射替换", value: "116", sub: "处 Hook 调用" },
   { label: "CI 签名", value: "4", sub: "项 env 对齐" },
 ];
 
@@ -33,7 +33,7 @@ const STEPS = [
   { n: 1, cmd: "git clone https://github.com/AceGuru-mjh/LSPatch-Noroot-modle.git", desc: "克隆仓库" },
   { n: 2, cmd: "cd LSPatch-Noroot-modle && cp /path/to/fix-package/* .", desc: "复制修复包到根目录" },
   { n: 3, cmd: "bash apply.sh", desc: "一键应用 patch + 验证铁律" },
-  { n: 4, cmd: "git add -A && git commit -m 'fix: 三大铁律+CI签名 v1.0.12'", desc: "提交" },
+  { n: 4, cmd: "git add -A && git commit -m 'fix: 三大铁律+CI签名 v1.0.14'", desc: "提交" },
   { n: 5, cmd: "git push origin main", desc: "推送触发 Actions" },
   { n: 6, cmd: "# 等待 ~5 分钟，在 Actions 页查看构建", desc: "11 模块并行构建" },
 ];
@@ -52,11 +52,11 @@ export function DownloadTab() {
         </div>
         <h1 className="text-balance text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
           <span className="bg-clip-text text-transparent" style={{ backgroundImage: "linear-gradient(135deg, #fff 0%, var(--m3-primary) 120%)" }}>
-            v1.0.12 完整修复包下载
+            v1.0.14 修复包下载
           </span>
         </h1>
         <p className="mx-auto mt-3 max-w-2xl text-pretty text-[12.5px] leading-relaxed text-white/55">
-          已克隆仓库并自动修复全部 11 个模块。下载 patch 文件，在仓库根目录执行 <code className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[11px] text-white/80">bash apply.sh</code>，push 后 GitHub Actions 即可生成 v1.0.12 APK
+          已克隆仓库并自动修复全部 11 个模块。下载 patch 文件，在仓库根目录执行 <code className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[11px] text-white/80">bash apply.sh</code>，push 后 GitHub Actions 即可生成 v1.0.14 APK
         </p>
       </section>
 
@@ -151,7 +151,7 @@ export function DownloadTab() {
           <div className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/8 p-3">
             <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
             <span className="text-[11.5px] text-emerald-300/90">
-              push 后约 5 分钟，11 个模块 APK 会在 <span className="font-mono font-semibold">Releases v1.0.12</span> 页出现
+              push 后约 5 分钟，11 个模块 APK 会在 <span className="font-mono font-semibold">Releases v1.0.14</span> 页出现
             </span>
           </div>
         </div>
@@ -166,7 +166,7 @@ export function DownloadTab() {
           items={[
             "build.yml 添加 MJH_STORE_FILE 指向 debug.jks",
             "4 项 env 全部对齐 debug123/debug",
-            "tag_name: v1.0.11 → v1.0.12",
+            "tag_name: v1.0.11 → v1.0.14",
             "Release body 修正为 11 个 NoRoot 模块",
           ]}
         />
@@ -204,9 +204,9 @@ export function DownloadTab() {
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {[
               "11/11 模块 XposedLoader.kt 零 import hooks/* ✓",
-              "89 处 Hook 调用改为 Class.forName 反射 ✓",
+              "116 处 Hook 调用改为 Class.forName 反射 ✓",
               "build.yml MJH_STORE_FILE 指向 debug.jks ✓",
-              "build.yml tag_name 更新为 v1.0.12 ✓",
+              "build.yml tag_name 更新为 v1.0.14 ✓",
               "AdBlockerX Config 类型修正为 AdBlockConfig ✓",
               "MicroXEnhancer .hook() 模式特殊处理 ✓",
             ].map((v, i) => (

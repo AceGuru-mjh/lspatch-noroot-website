@@ -297,3 +297,47 @@ Stage Summary:
 - apply.sh 升级为 7 项验证：铁律1 / 铁律2 / prefs / MODE_WORLD_READABLE / permission / build.yml / versionName
 - 用户操作：下载 patch → bash apply.sh → git push → 5 分钟得 v1.0.13 APK
 - v1.0.13 是真正可用的版本：APK 既能安装又能集成模式运行，总开关跨进程同步，Hook 类加载健壮，ConfigProvider 安全
+
+---
+Task ID: 7-website-deploy
+Agent: main (Z.ai Code)
+Task: 完善为 LSPatch NoRoot 官网 + 准备新仓库部署
+
+Work Log:
+- 设计官网完整结构：顶部导航 + 8 大 section（Hero/Features/Modules/Rules/Preview/V1013/Download/Roadmap/FAQ）
+- 创建 6 个新 site 组件：
+  · SiteHeader: 顶部导航（Logo + 7 锚点 + GitHub + 下载按钮 + 移动端菜单）
+  · Hero: 首屏（徽章 + 大标题 + 副标题 + 3 CTA + 5 特性标签 + 3 统计卡）
+  · Features: 6 核心特性卡片（免Root/M3悬浮球/三大铁律/安全IPC/11模块/CI构建）
+  · ModuleShowcase: 11 模块市场（左网格 + 右详情卡，点击切换，含功能/目标/铁律验证）
+  · PreviewSection: 悬浮球 Demo（保留原有交互，包装为 section）
+  · SectionWrapper: 通用 section 包装器（badge + 标题 + 副标题）
+  · FAQ: 8 个常见问题（折叠展开）
+  · SiteFooter: 完整页脚（品牌 + 模块链接 + 资源链接 + 版权 + 返回顶部）
+- 重构 page.tsx：单页长滚动官网，9 个 section 顺序：Hero → Features → Modules → Rules → Preview → V1013 → Download → Roadmap → FAQ
+- 更新 layout.tsx 元数据：官网标题 + SEO 关键词 + OpenGraph + Twitter Card
+- 准备部署文件：
+  · README.md: 完整项目说明（特性/技术栈/开发/部署/结构/设计系统）
+  · vercel.json: Vercel 部署配置（framework/build/install command + headers）
+  · DEPLOY.md: 详细部署指南（Vercel/Cloudflare/Docker 3 种方式 + 验证清单 + FAQ）
+  · init-repo.sh: 新仓库初始化脚本（git init + commit + remote + push 自动化）
+- Agent Browser 全面验证：
+  · Hero 首屏：徽章/标题/CTA/统计卡正常
+  · Features：6 特性卡片渲染
+  · ModuleShowcase：11 模块点击切换正常
+  · IronRules：三大铁律展示
+  · PreviewSection：悬浮球点击展开面板正常（总开关/关闭/清空）
+  · V1013：8 统计卡 + 修复项 + 模块表格
+  · Download：4 文件 HTTP 200 可下载
+  · Roadmap：6 迭代卡片
+  · FAQ：8 问题折叠展开
+  · Footer：完整链接 + 返回顶部
+  · 移动端 390x844 响应式正常
+  · 控制台零错误
+
+Stage Summary:
+- 官网完善完成：9 section 单页长滚动，顶部锚点导航 + 移动端菜单
+- 新增 6 个 site 组件 + 保留所有 lsp 业务组件
+- 部署文件齐全：README + vercel.json + DEPLOY.md + init-repo.sh
+- 用户操作：bash init-repo.sh <用户名> → Vercel Import → 2 分钟部署完成
+- 官网地址示例：https://lspatch-noroot-website.vercel.app

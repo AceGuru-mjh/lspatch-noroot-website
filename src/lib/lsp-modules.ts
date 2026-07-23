@@ -50,6 +50,7 @@ export interface LspModule {
   pkg: string;
   icon: LucideIcon;
   desc: string;
+  features: string[];
   targets: string[];
   /** 最小化悬浮球显示的指标 */
   metric: {
@@ -206,6 +207,7 @@ export const LSP_MODULES: LspModule[] = [
     pkg: "com.adblocker.noroot",
     icon: Shield,
     desc: "拦截 WebView / OkHttp 黑名单广告、开屏弹窗、追踪器",
+    features: ["WebView 广告拦截", "OkHttp 请求过滤", "Hosts 黑名单", "追踪器阻断", "弹窗关闭", "Cookie 清理", "Intent 拦截", "重定向阻断", "DNS 劫持", "截图解锁", "摇一摇拦截"],
     targets: ["浏览器", "资讯 APP", "电商 APP"],
     metric: { label: "已拦截", field: "blocked", suffix: "条", isCount: true },
     interval: [900, 2600],
@@ -230,6 +232,7 @@ export const LSP_MODULES: LspModule[] = [
     pkg: "com.privacyguard.noroot",
     icon: Lock,
     desc: "伪造设备 ID / IMEI / 地理位置 / 传感器，阻断追踪",
+    features: ["Android ID 伪造", "IMEI 屏蔽", "地理位置伪造", "传感器禁用", "运营商伪造", "通讯录屏蔽", "设备型号伪装", "Advertising ID 清空", "剪贴板保护", "时区语言伪造", "安装状态伪装", "包可见性伪造"],
     targets: ["全部 APP"],
     metric: { label: "已保护", field: "protected", suffix: "次", isCount: true },
     interval: [3200, 6500],
@@ -253,6 +256,7 @@ export const LSP_MODULES: LspModule[] = [
     pkg: "com.gameunlocker.noroot",
     icon: Gamepad2,
     desc: "解锁帧率 / 伪装机型 / 提升触控采样率 / 降低延迟",
+    features: ["帧率上限解锁 120Hz", "机型伪装 ROG", "进程优先级提升", "网络延迟优化", "触控采样率 240Hz", "内存调度优化", "画质选项解锁", "温控降频绕过", "分辨率伪装", "反检测隐藏"],
     targets: ["游戏 APP"],
     metric: { label: "帧率", field: "fps", suffix: "Hz" },
     interval: [4000, 8000],
@@ -276,6 +280,7 @@ export const LSP_MODULES: LspModule[] = [
     pkg: "com.batteryoptimizer.noroot",
     icon: BatteryCharging,
     desc: "优化 WakeLock / Alarm / JobScheduler，冻结后台",
+    features: ["WakeLock 优化", "Alarm 心跳对齐", "后台同步合并", "AppOps 限制", "JobScheduler 优化", "定位降频", "动画优化", "传感器优化", "蓝牙扫描节流", "后台相机阻断", "震动节流"],
     targets: ["系统 / 后台 APP"],
     metric: { label: "省电", field: "savedPct", suffix: "%", prefix: "-" },
     interval: [3500, 7000],
@@ -299,6 +304,7 @@ export const LSP_MODULES: LspModule[] = [
     pkg: "com.microx.enhancer",
     icon: MessageCircle,
     desc: "防撤回 / 去朋友圈广告 / 美化 / 隐藏在线状态",
+    features: ["防撤回消息", "朋友圈广告去除", "在线状态隐藏", "聊天界面美化", "表情包上限解锁", "朋友圈更新静默", "安全绕过", "隐私保护", "批量管理", "自动回复", "语音导出", "消息搜索增强", "自定义主题"],
     targets: ["微信", "QQ"],
     metric: { label: "防撤回", field: "recall", suffix: "条", isCount: true },
     interval: [5000, 10000],
@@ -322,6 +328,7 @@ export const LSP_MODULES: LspModule[] = [
     pkg: "com.vipunlocker.noroot",
     icon: Crown,
     desc: "解锁去广告 / 会员主题 / 付费章节 / Pro 模式",
+    features: ["去广告 VIP", "会员主题解锁", "付费章节解锁", "Pro 模式", "高清画质", "云空间解锁", "专属字体", "去水印"],
     targets: ["视频 / 工具 / 阅读 APP"],
     metric: { label: "已解锁", field: "unlocked", suffix: "项", isCount: true },
     interval: [6000, 11000],
@@ -345,6 +352,7 @@ export const LSP_MODULES: LspModule[] = [
     pkg: "com.videosaver.noroot",
     icon: Video,
     desc: "解析抖音 / 快手 / 小红书视频链接，去水印下载",
+    features: ["抖音去水印", "快手去水印", "小红书下载", "B 站下载", "直播流解析", "音频提取", "批量下载", "Shizuku 抓包"],
     targets: ["短视频 APP"],
     metric: { label: "已下载", field: "video", suffix: "个", isCount: true },
     interval: [4500, 9000],
@@ -368,6 +376,7 @@ export const LSP_MODULES: LspModule[] = [
     pkg: "com.stepmodifier.noroot",
     icon: Footprints,
     desc: "添加步数 / 模拟轨迹 / 生成心率与睡眠数据",
+    features: ["步数添加", "运动轨迹模拟", "步数同步", "心率数据生成", "爬楼模拟", "睡眠数据生成", "ContentProvider 注入", "传感器阻断", "多 APP 同步", "历史伪造"],
     targets: ["运动健康 APP"],
     metric: { label: "添加", field: "steps", suffix: "步", isCount: true },
     interval: [4000, 8500],
@@ -391,6 +400,7 @@ export const LSP_MODULES: LspModule[] = [
     pkg: "com.audioboost.noroot",
     icon: Volume2,
     desc: "突破音量上限 / 均衡器 / 降噪 / Hi-Fi 通道",
+    features: ["音量增强 +6dB", "Tinymix 桥接", "低音增强", "均衡器", "扬声器增强", "麦克风增强", "音质增强"],
     targets: ["音乐 / 视频 APP"],
     metric: { label: "增益", field: "db", suffix: "dB", prefix: "+" },
     interval: [5000, 9500],
@@ -414,6 +424,7 @@ export const LSP_MODULES: LspModule[] = [
     pkg: "com.notifymaster.noroot",
     icon: Bell,
     desc: "静音 / 合并 / 拦截营销 / 延迟 / 分类通知",
+    features: ["通知过滤", "防撤回通知", "通知历史", "通知美化", "批量通知", "优先级覆盖", "静默通知", "Shizuku 命令"],
     targets: ["系统通知"],
     metric: { label: "已静音", field: "muted", suffix: "条", isCount: true },
     interval: [3800, 7500],
@@ -437,6 +448,7 @@ export const LSP_MODULES: LspModule[] = [
     pkg: "com.shizuku.scenefix",
     icon: Plug,
     desc: "修复 Scene 工具箱在 Shizuku 授权列表不显示",
+    features: ["授权请求修复", "Shizuku 授权", "Scene 隐藏", "看门狗服务", "变体检测", "列表注入", "自动授权助手"],
     targets: ["Shizuku / Scene"],
     metric: { label: "状态", field: "fixed", suffix: "" },
     interval: [7000, 13000],

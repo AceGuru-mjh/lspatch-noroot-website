@@ -60,10 +60,10 @@ export default function Home() {
         {/* 悬浮球 Demo */}
         <PreviewSection />
 
-        {/* v1.0.13 修复看板 */}
+        {/* v1.0.14 修复看板 */}
         <SectionWrapper
           id="v1013"
-          badge="v1.0.13 大完善"
+          badge="v1.0.14 大完善"
           badgeColor="#FFD87A"
           title="完整修复进度看板"
           subtitle="三大铁律 + IPC + 版本号 + permission 一次修完，86 文件 2294 行 patch，0 残留问题"
@@ -88,7 +88,7 @@ export default function Home() {
           badge="下载中心"
           badgeColor="#6DBA95"
           title="下载修复包 & APK"
-          subtitle="v1.0.13 完整修复包 · 11 模块 APK · GitHub Releases"
+          subtitle="v1.0.14 修复包 · 11 模块 APK · GitHub Releases"
         >
           <DownloadTab />
         </SectionWrapper>
@@ -98,7 +98,7 @@ export default function Home() {
           id="roadmap"
           badge="迭代路线"
           badgeColor="#7DD3FC"
-          title="v1.0.13 → v1.2.0 路线图"
+          title="v1.0.14 → v1.2.0 路线图"
           subtitle="从铁律修复到 M3 悬浮球升级，6 个版本的完整迭代计划"
         >
           <IterationPlan />

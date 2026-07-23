@@ -64,7 +64,7 @@ export function SiteFooter() {
           <div>
             <div className="mb-3 text-[11px] font-bold uppercase tracking-wider text-white/40">资源</div>
             <ul className="space-y-2 text-[11.5px]">
-              <li><a href="#download" className="text-white/55 transition-colors hover:text-emerald-300">下载 v1.0.13</a></li>
+              <li><a href="#download" className="text-white/55 transition-colors hover:text-emerald-300">下载 v1.0.14</a></li>
               <li><a href="#rules" className="text-white/55 transition-colors hover:text-emerald-300">三大铁律</a></li>
               <li><a href="#preview" className="text-white/55 transition-colors hover:text-emerald-300">悬浮球 Demo</a></li>
               <li><a href="#faq" className="text-white/55 transition-colors hover:text-emerald-300">FAQ</a></li>
